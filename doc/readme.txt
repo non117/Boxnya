@@ -1,23 +1,23 @@
-=== �Ȃɂ��ł���́H
-���v���C�A�ӂ��ڂ��A����RT�A�L�[���[�h�q�b�g�̒ʒm���o���܂��B
-im.kayac����ꂽiPhone��push���邱�Ƃ��ł��܂��B
-Android�͂悭�킩��܂���B
+=== なにができるの？
+リプライ、ふぁぼられ、公式RT、キーワードヒットの通知が出来ます。
+im.kayacを入れたiPhoneにpushすることもできます。
+Androidはよくわかりません。
 
-=== ��������
-1. settings.yaml�ɐF�X�����܂��傤�B
-    screen_name : �X�N���[���l�[��
-    reg_exp : �L�[���[�h(���K�\��)
-    im_id : im.kayac��id
-    im_pswd : im.kayac�̃p�X���[�h
-    im_sig : im.kayac�̔閧��
-�p�X���[�h�Ɣ閧���͋�ł����v�ł��B
-2. python���C���X�g�[��
-3. easy_install���C���X�g�[��
+=== つかいかた
+1. settings.yamlに色々書きましょう。
+    screen_name : スクリーンネーム
+    reg_exp : キーワード(正規表現)
+    im_id : im.kayacのid
+    im_pswd : im.kayacのパスワード
+    im_sig : im.kayacの秘密鍵
+パスワードと秘密鍵は空でも大丈夫です。
+2. pythonをインストール
+3. easy_installをインストール
 4.
 easy_install pyyaml
 easy_install simplejson
-   ���V�F����R�}���h�v�����v�g�Ŏ��s�B
+   をシェルやコマンドプロンプトで実行。
 5. python boxnya.py
-6. oauth�F�؂��Ă��������B
-7. ���u���܂��傤�B
-  �����ӁFyaml�t�@�C����boxnya.py�Ɠ����f�B���N�g���ɒu���Ă��������B
+6. oauth認証してください。
+7. 放置しましょう。
+  ※注意：yamlファイルはboxnya.pyと同じディレクトリに置いてください。
