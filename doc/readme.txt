@@ -10,6 +10,7 @@ Androidはよくわかりません。
     im_id : im.kayacのid
     im_pswd : im.kayacのパスワード
     im_sig : im.kayacの秘密鍵
+  ※注意：utf-8で保存しないと動きません。
 パスワードと秘密鍵は空でも大丈夫です。
 2. pythonをインストール
 3. easy_installをインストール
