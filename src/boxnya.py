@@ -174,6 +174,11 @@ def getStream():
     req.add_header("Authorization", oauth_header(params))
     return urllib2.urlopen(req)
 
+def output(text,im):
+    im.notify(text)
+    time = datetime.datetime.today()
+    print "---> ( " + str(time)[:22] + " ) " + text
+
 def main():
     CheckSettings()
     im = IMKayac(im_id, im_pswd, im_sig)
@@ -185,26 +190,18 @@ def main():
         recv = stream.readline()
         try:
             json = simplejson.loads(recv)
-            try:
-                if json.has_key("event"):
-                    if json["event"] == "favorite" and json["target"]["screen_name"] == screen_name:
-                        time = datetime.datetime.today()
-                        text = u"★ "+ json["source"]["screen_name"] + " Favorited: " + json["target_object"]["text"]
-                        print "---> ( " + str(time)[:22] + " ) " + text
-                        im.notify(text)
-                if pattern.search(json["text"]):
-                    time = datetime.datetime.today()
-                    text = json["user"]["screen_name"] + ": " + json["text"]
-                    print "---> ( " + str(time)[:22] + " ) " + text
-                    im.notify(text)
-            except KeyError:
-                pass
+            if json.get("event") == "favorite" and json.get("target")["screen_name"] == screen_name:
+                text = u"★ "+ json["source"]["screen_name"] + " Favorited: " + json["target_object"]["text"]
+                output(text,im)
+            elif pattern.search(json.get("text","")):
+                text = json["user"]["screen_name"] + ": " + json["text"]
+                output(text,im)
         except simplejson.JSONDecodeError:
             pass
 
 if __name__ == "__main__":
-    print ">--- Boxnya service start"
+    print "---> Boxnya service start"
     try:
         main()
     except KeyboardInterrupt:
-        print "\n>--- see you !"
+        print "\n---> see you !"
