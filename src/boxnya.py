@@ -181,6 +181,7 @@ def output(text,im):
 
 def main():
     CheckSettings()
+    print "---> Boxnya service start"
     im = IMKayac(im_id, im_pswd, im_sig)
     pattern = re.compile(reg_exp + "|@%s" % screen_name)
     stream = getStream()
@@ -200,7 +201,6 @@ def main():
             pass
 
 if __name__ == "__main__":
-    print "---> Boxnya service start"
     try:
         main()
     except KeyboardInterrupt:
