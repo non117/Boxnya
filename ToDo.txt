@@ -1,0 +1,5 @@
+ToDo
+PIN打つときにBackspaceとかDelとかが効かない問題
+PIN打ったあとにsetting.yamlを作るUI
+RevokeされてTokenが効かなかった場合の処理
+favのDoS対策
