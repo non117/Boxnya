@@ -11,9 +11,12 @@ import hashlib
 import yaml
 import datetime
 from time import sleep , time ,strftime,localtime
+import os
 
 class Userstream(object):
     def __init__(self):
+        self.cdir = os.path.abspath(os.path.dirname(__file__))
+        self.oauth_yaml_path = os.path.normpath(os.path.join(self.cdir,"oauth.yaml"))
         self.ckey = "ZctjpCsuug2VtjfEuceg"
         self.csecret = "pO9WL26Ia9rXyjNavXrit1iclCt1G2J1nRA4jZ6LGc"
         self.reqt_url = 'http://twitter.com/oauth/request_token'
@@ -23,7 +26,7 @@ class Userstream(object):
 
     def _loadOauth(self):
         try:
-            f = open("oauth.yaml","r")
+            f = open(self.oauth_yaml_path,"r")
             oauth_dict = yaml.load(f)
             self.atoken = oauth_dict["atoken"]
             self.atoken_secret = oauth_dict["atoken_secret"]
@@ -104,7 +107,7 @@ class Userstream(object):
         self.atoken_secret = fin["oauth_token_secret"][0]
 
         oauth_dict = {"atoken":self.atoken, "atoken_secret":self.atoken_secret}
-        f = open("oauth.yaml","w")
+        f = open(self.oauth_yaml_path,"w")
         yaml.dump(oauth_dict, f, encoding="utf8", default_flow_style=False)
         f.close()
 
@@ -146,6 +149,8 @@ class IMKayac(object):
 
 class Boxnya(object):
     def __init__(self):
+        self.cdir = os.path.abspath(os.path.dirname(__file__))
+        self.settings_yaml_path = os.path.normpath(os.path.join(self.cdir,"settings.yaml"))
         self.screen_name = ""
         self.reg_exp = ""
         self.im_id = ""
@@ -156,7 +161,7 @@ class Boxnya(object):
 
     def _loadSettings(self):
         try:
-            f = open("settings.yaml","r")
+            f = open(self.settings_yaml_path,"r")
             settings = yaml.load(f)
             self.screen_name = settings["screen_name"]
             self.reg_exp = settings["reg_exp"]
@@ -185,7 +190,7 @@ class Boxnya(object):
                          "im_pswd":self.im_pswd,
                          "im_sig":self.im_sig
                          }
-        f = open("settings.yaml","w")
+        f = open(self.settings_yaml_path,"w")
         yaml.dump(settings_dict, f, encoding="utf8", default_flow_style=False)
         f.close()
 
