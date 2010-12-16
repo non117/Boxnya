@@ -1,17 +1,6 @@
 #!/usr/bin/python
 #-*- encoding:utf-8 -*-
 
-atoken =""
-atoken_secret = ""
-ckey = "ZctjpCsuug2VtjfEuceg"
-csecret = "pO9WL26Ia9rXyjNavXrit1iclCt1G2J1nRA4jZ6LGc"
-
-screen_name = ""
-im_id = ""
-im_pswd = ""
-im_sig = ""
-reg_exp = ""
-
 import time, random
 import urllib, urllib2
 import hmac, hashlib
@@ -23,29 +12,123 @@ import yaml
 import datetime
 from time import sleep , time ,strftime,localtime
 
-try:
-    f = open("oauth.yaml","r")
-    oauth_dict = yaml.load(f)
-    atoken = oauth_dict["atoken"]
-    atoken_secret = oauth_dict["atoken_secret"]
-    f.close()
-except IOError:
-    print "### Permit Boxnya to access your twitter account.\t###\n"
+class Userstream(object):
+    def __init__(self):
+        self.ckey = "ZctjpCsuug2VtjfEuceg"
+        self.csecret = "pO9WL26Ia9rXyjNavXrit1iclCt1G2J1nRA4jZ6LGc"
+        self.reqt_url = 'http://twitter.com/oauth/request_token'
+        self.auth_url = 'http://twitter.com/oauth/authorize'
+        self.acct_url = 'http://twitter.com/oauth/access_token'
+        self._loadOauth()
 
-try:
-    f = open("settings.yaml","r")
-    settings = yaml.load(f)
-    screen_name = settings["screen_name"]
-    reg_exp = settings["reg_exp"]
-    im_id = settings["im_id"]
-    im_pswd = settings["im_pswd"]
-    im_sig = settings["im_sig"]
-    f.close()
+    def _loadOauth(self):
+        try:
+            f = open("oauth.yaml","r")
+            oauth_dict = yaml.load(f)
+            self.atoken = oauth_dict["atoken"]
+            self.atoken_secret = oauth_dict["atoken_secret"]
+            f.close()
+        except IOError:
+            print "---> Please authorize Boxnya.\n"
+            self.OauthInitializer()
 
-except IOError:
-    print "### No settings.yaml.\t###\n"
+    def _init_params(self):
+        p = {
+            "oauth_consumer_key": self.ckey,
+            "oauth_signature_method": "HMAC-SHA1",
+            "oauth_timestamp": str(int(time())),
+            "oauth_nonce": str(random.getrandbits(64)),
+            "oauth_version": "1.0"
+            }
+        return p
 
-class IMKayac:
+    def _make_signature(self, params, url, method, csecret, secret = ""):
+        # Generate Signature Base String
+        plist = []
+        for i in sorted(params):
+            plist.append("%s=%s" % (i, params[i]))
+
+        pstr = "&".join(plist)
+        msg = "%s&%s&%s" % (method, urllib.quote(url, ""),
+                            urllib.quote(pstr, ""))
+
+        # Calculate Signature
+        h = hmac.new("%s&%s" % (csecret, secret), msg, hashlib.sha1)
+        sig = h.digest().encode("base64").strip()
+        return sig
+
+    def OauthInitializer(self):
+        # Request Parameters
+        params = self._init_params()
+
+        # Generate Signature
+        sig = self._make_signature(params, self.reqt_url, "GET", self.csecret)
+        params["oauth_signature"] = sig
+
+        # Get Token
+        req = urllib2.Request("%s?%s" % (self.reqt_url, urllib.urlencode(params)))
+        resp = urllib2.urlopen(req)
+
+        # Parse Token Parameters
+        ret = cgi.parse_qs(resp.read())
+        token = ret["oauth_token"][0]
+        token_secret = ret["oauth_token_secret"][0]
+
+        # Get PIN
+        print "* Please access to this URL, and allow."
+        print "%s?%s=%s" % (self.auth_url, "oauth_token", token)
+        print "\n* After that, will display 7 digit PIN, input here."
+        print "PIN ->",
+        pin = raw_input()
+        pin = int(pin)
+
+        print "Get access token:",
+
+        # Generate Access Token Request
+        params = self._init_params()
+        params["oauth_verifier"] = pin
+        params["oauth_token"] = token
+
+        sig = self._make_signature(params, self.acct_url, "GET", self.csecret, token_secret)
+        params["oauth_signature"] = sig
+
+        # Get Access Token
+        req = urllib2.Request("%s?%s" % (self.acct_url, urllib.urlencode(params)))
+        resp = urllib2.urlopen(req)
+
+        print "\t[OK]\n"
+
+        # Parse Access Token
+        fin = cgi.parse_qs(resp.read())
+        self.atoken = fin["oauth_token"][0]
+        self.atoken_secret = fin["oauth_token_secret"][0]
+
+        oauth_dict = {"atoken":self.atoken, "atoken_secret":self.atoken_secret}
+        f = open("oauth.yaml","w")
+        yaml.dump(oauth_dict, f, encoding="utf8", default_flow_style=False)
+        f.close()
+
+        print "* Done."
+
+    def _oauth_header(self, params):
+        plist = []
+        for p in params:
+            plist.append('%s="%s"' % (p, urllib.quote(params[p])))
+        return "OAuth %s" % (", ".join(plist))
+
+    def getStream(self):
+        url ='https://userstream.twitter.com/2/user.json'
+        params = self._init_params()
+        params["oauth_token"] = self.atoken
+
+        sig = self._make_signature(params, url, "GET", self.csecret, self.atoken_secret)
+        params["oauth_signature"] = sig
+
+        req = urllib2.Request(url)
+        req.add_header("Authorization", self._oauth_header(params))
+        return urllib2.urlopen(req)
+
+class IMKayac(object):
     def __init__(self,id,password=None,sig=None):
         self.id = id
         self.password = password
@@ -61,147 +144,80 @@ class IMKayac:
             params['sig'] = hashlib.sha1(msg+self.sig).hexdigest()
         urllib2.build_opener().open(path, urllib.urlencode(params))
 
-def make_signature(params, url, method, csecret, secret = ""):
-    # Generate Signature Base String
-    plist = []
-    for i in sorted(params):
-        plist.append("%s=%s" % (i, params[i]))
+class Boxnya(object):
+    def __init__(self):
+        self.screen_name = ""
+        self.reg_exp = ""
+        self.im_id = ""
+        self.im_pswd = ""
+        self.im_sig = ""
+        self._loadSettings()
 
-    pstr = "&".join(plist)
-    msg = "%s&%s&%s" % (method, urllib.quote(url, ""),
-                        urllib.quote(pstr, ""))
-
-    # Calculate Signature
-    h = hmac.new("%s&%s" % (csecret, secret), msg, hashlib.sha1)
-    sig = h.digest().encode("base64").strip()
-
-    return sig
-
-def CheckSettings():
-    if not screen_name:
-        print "### Please set the screen name.\t###"
-    if not reg_exp:
-        print "### Please set the keyword.\t###"
-    if not im_id:
-        print "### Please set the im.kayac id.\t###"
-    if not screen_name or not reg_exp or not im_id:
-        quit()
-
-def init_params():
-    p = {
-        "oauth_consumer_key": ckey,
-        "oauth_signature_method": "HMAC-SHA1",
-        "oauth_timestamp": str(int(time())),
-        "oauth_nonce": str(random.getrandbits(64)),
-        "oauth_version": "1.0"
-        }
-
-    return p
-
-reqt_url = 'http://twitter.com/oauth/request_token'
-auth_url = 'http://twitter.com/oauth/authorize'
-acct_url = 'http://twitter.com/oauth/access_token'
-
-if not atoken and not atoken_secret:
-    # Request Parameters
-    params = init_params()
-
-    # Generate Signature
-    sig = make_signature(params, reqt_url, "GET", csecret)
-    params["oauth_signature"] = sig
-
-    # Get Token
-    req = urllib2.Request("%s?%s" % (reqt_url, urllib.urlencode(params)))
-    resp = urllib2.urlopen(req)
-
-    # Parse Token Parameters
-    ret = cgi.parse_qs(resp.read())
-    token = ret["oauth_token"][0]
-    token_secret = ret["oauth_token_secret"][0]
-
-    # Get PIN
-    print "* Please access to this URL, and allow."
-    print "%s?%s=%s" % (auth_url, "oauth_token", token)
-    print "\n* After that, will display 7 digit PIN, input here."
-    print "PIN ->",
-    pin = raw_input()
-    pin = int(pin)
-
-    print "Get access token:",
-
-    # Generate Access Token Request
-    params = init_params()
-    params["oauth_verifier"] = pin
-    params["oauth_token"] = token
-
-    sig = make_signature(params, acct_url, "GET", csecret, token_secret)
-    params["oauth_signature"] = sig
-
-    # Get Access Token
-    req = urllib2.Request("%s?%s" % (acct_url, urllib.urlencode(params)))
-    resp = urllib2.urlopen(req)
-
-    print "\t[OK]\n"
-
-    # Parse Access Token
-    fin = cgi.parse_qs(resp.read())
-    atoken = fin["oauth_token"][0]
-    atoken_secret = fin["oauth_token_secret"][0]
-
-    oauth_dict = {"atoken":atoken, "atoken_secret":atoken_secret}
-    f = open("oauth.yaml","w")
-    yaml.dump(oauth_dict,f,default_flow_style=False)
-    f.close()
-
-    print "* Done."
-
-def oauth_header(params):
-    plist = []
-    for p in params:
-        plist.append('%s="%s"' % (p, urllib.quote(params[p])))
-
-    return "OAuth %s" % (", ".join(plist))
-
-def getStream():
-    url ='https://userstream.twitter.com/2/user.json'
-    params = init_params()
-    params["oauth_token"] = atoken
-
-    sig = make_signature(params, url, "GET", csecret, atoken_secret)
-    params["oauth_signature"] = sig
-
-    req = urllib2.Request(url)
-    req.add_header("Authorization", oauth_header(params))
-    return urllib2.urlopen(req)
-
-def output(text,im):
-    im.notify(text)
-    time = datetime.datetime.today()
-    print "---> ( " + str(time)[:22] + " ) " + text
-
-def main():
-    CheckSettings()
-    print "---> Boxnya service start"
-    im = IMKayac(im_id, im_pswd, im_sig)
-    pattern = re.compile(reg_exp + "|@%s" % screen_name)
-    stream = getStream()
-    stream.readline()
-    stream.readline()
-    while True:
-        recv = stream.readline()
+    def _loadSettings(self):
         try:
-            json = simplejson.loads(recv)
-            if json.get("event") == "favorite" and json.get("target")["screen_name"] == screen_name:
-                text = u"★ "+ json["source"]["screen_name"] + " Favorited: " + json["target_object"]["text"]
-                output(text,im)
-            elif pattern.search(json.get("text","")):
-                text = json["user"]["screen_name"] + ": " + json["text"]
-                output(text,im)
-        except simplejson.JSONDecodeError:
-            pass
+            f = open("settings.yaml","r")
+            settings = yaml.load(f)
+            self.screen_name = settings["screen_name"]
+            self.reg_exp = settings["reg_exp"]
+            self.im_id = settings["im_id"]
+            self.im_pswd = settings["im_pswd"]
+            self.im_sig = settings["im_sig"]
+            f.close()
+        except IOError:
+            print "Please set your account data.\n"
+            self.SettingsInitializer()
+
+    def SettingsInitializer(self):
+        print "* Please input screen name."
+        self.screen_name = raw_input("->")
+        print "* Please input search keyword. (You can use a regular expression.)"
+        self.reg_exp = raw_input("->").decode("utf_8")
+        print "* Please input im.kayac userid."
+        self.im_id = raw_input("->")
+        print "* Please input im.kayac password. (optional)"
+        self.im_pswd = raw_input("->")
+        print "* Please input im.kayac private key. (optional)"
+        self.im_sig = raw_input("->")
+        settings_dict = {"screen_name":self.screen_name,
+                         "reg_exp":self.reg_exp,
+                         "im_id":self.im_id,
+                         "im_pswd":self.im_pswd,
+                         "im_sig":self.im_sig
+                         }
+        f = open("settings.yaml","w")
+        yaml.dump(settings_dict, f, encoding="utf8", default_flow_style=False)
+        f.close()
+
+    def _output(self, text, im):
+        im.notify(text)
+        time = datetime.datetime.today()
+        print "---> ( " + str(time)[:22] + " ) " + text
+
+    def main(self):
+        im = IMKayac(self.im_id, self.im_pswd, self.im_sig)
+        pattern = re.compile(self.reg_exp + "|@%s" % self.screen_name)
+        userstream = Userstream()
+        print "---> Boxnya service start"
+        stream = userstream.getStream()
+        stream.readline()
+        stream.readline()
+        while True:
+            recv = stream.readline()
+            try:
+                json = simplejson.loads(recv)
+            except simplejson.JSONDecodeError:
+                pass
+            else:
+                if json.get("event") == "favorite" and json.get("target")["screen_name"] == self.screen_name:
+                    text = u"★ "+ json["source"]["screen_name"] + " Favorited: " + json["target_object"]["text"]
+                    self._output(text,im)
+                elif pattern.search(json.get("text","")):
+                    text = json["user"]["screen_name"] + ": " + json["text"]
+                    self._output(text,im)
 
 if __name__ == "__main__":
     try:
-        main()
+        boxnya = Boxnya()
+        boxnya.main()
     except KeyboardInterrupt:
         print "\n---> see you !"
