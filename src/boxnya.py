@@ -172,7 +172,7 @@ class Boxnya(object):
         print "* Please input screen name."
         self.screen_name = raw_input("->")
         print "* Please input search keyword. (You can use a regular expression.)"
-        self.reg_exp = raw_input("->").decode("utf_8")
+        self.reg_exp = raw_input("->")
         print "* Please input im.kayac userid."
         self.im_id = raw_input("->")
         print "* Please input im.kayac password. (optional)"
