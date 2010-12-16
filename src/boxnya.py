@@ -152,6 +152,7 @@ class Boxnya(object):
         self.im_pswd = ""
         self.im_sig = ""
         self._loadSettings()
+        self.buffer = ""
 
     def _loadSettings(self):
         try:
@@ -188,13 +189,18 @@ class Boxnya(object):
         yaml.dump(settings_dict, f, encoding="utf8", default_flow_style=False)
         f.close()
 
-    def _output(self, text, im):
-        im.notify(text)
+    def _output(self, text):
+        self.im.notify(text)
         time = datetime.datetime.today()
         print "---> ( " + str(time)[:22] + " ) " + text
 
+    def CheckText(self, text):
+        if not text == self.buffer:
+            self._output(text)
+            self.buffer = text
+
     def main(self):
-        im = IMKayac(self.im_id, self.im_pswd, self.im_sig)
+        self.im = IMKayac(self.im_id, self.im_pswd, self.im_sig)
         pattern = re.compile(self.reg_exp + "|@%s" % self.screen_name)
         userstream = Userstream()
         print "---> Boxnya service start"
@@ -210,10 +216,10 @@ class Boxnya(object):
             else:
                 if json.get("event") == "favorite" and json.get("target")["screen_name"] == self.screen_name:
                     text = u"★ "+ json["source"]["screen_name"] + " Favorited: " + json["target_object"]["text"]
-                    self._output(text,im)
+                    self.CheckText(text)
                 elif pattern.search(json.get("text","")):
                     text = json["user"]["screen_name"] + ": " + json["text"]
-                    self._output(text,im)
+                    self.CheckText(text)
 
 if __name__ == "__main__":
     try:
