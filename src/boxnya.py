@@ -16,7 +16,7 @@ import os
 class Userstream(object):
     def __init__(self):
         self.cdir = os.path.abspath(os.path.dirname(__file__))
-        self.oauth_yaml_path = os.path.normpath(os.path.join(self.cdir,"oauth.yaml"))
+        self.oauth_yaml_path = os.path.normpath(os.path.join(self.cdir,"../conf","oauth.yaml"))
         self.ckey = "ZctjpCsuug2VtjfEuceg"
         self.csecret = "pO9WL26Ia9rXyjNavXrit1iclCt1G2J1nRA4jZ6LGc"
         self.reqt_url = 'http://twitter.com/oauth/request_token'
@@ -32,7 +32,7 @@ class Userstream(object):
             self.atoken_secret = oauth_dict["atoken_secret"]
             f.close()
         except IOError:
-            print "---> Please authorize Boxnya.\n"
+            print "---! Please authorize Boxnya"
             self.OauthInitializer()
 
     def _init_params(self):
@@ -61,45 +61,52 @@ class Userstream(object):
         return sig
 
     def OauthInitializer(self):
-        # Request Parameters
-        params = self._init_params()
+        try:
+            # Request Parameters
+            params = self._init_params()
 
-        # Generate Signature
-        sig = self._make_signature(params, self.reqt_url, "GET", self.csecret)
-        params["oauth_signature"] = sig
+            # Generate Signature
+            sig = self._make_signature(params, self.reqt_url, "GET", self.csecret)
+            params["oauth_signature"] = sig
 
-        # Get Token
-        req = urllib2.Request("%s?%s" % (self.reqt_url, urllib.urlencode(params)))
-        resp = urllib2.urlopen(req)
+            # Get Token
+            req = urllib2.Request("%s?%s" % (self.reqt_url, urllib.urlencode(params)))
+            resp = urllib2.urlopen(req)
 
-        # Parse Token Parameters
-        ret = cgi.parse_qs(resp.read())
-        token = ret["oauth_token"][0]
-        token_secret = ret["oauth_token_secret"][0]
+            # Parse Token Parameters
+            ret = cgi.parse_qs(resp.read())
+            token = ret["oauth_token"][0]
+            token_secret = ret["oauth_token_secret"][0]
 
-        # Get PIN
-        print "* Please access to this URL, and allow."
-        print "%s?%s=%s" % (self.auth_url, "oauth_token", token)
-        print "\n* After that, will display 7 digit PIN, input here."
-        print "PIN ->",
-        pin = raw_input()
-        pin = int(pin)
+            # Get PIN
+            print "---* Please access to this URL, and allow."
+            print "[ %s?%s=%s ] " % (self.auth_url, "oauth_token", token)
+            print "---* After that, will display 7 digit PIN, input here."
+            print "->",
+            pin = raw_input()
+            pin = int(pin)
 
-        print "Get access token:",
+            print "---* Get access token:",
 
-        # Generate Access Token Request
-        params = self._init_params()
-        params["oauth_verifier"] = pin
-        params["oauth_token"] = token
+            # Generate Access Token Request
+            params = self._init_params()
+            params["oauth_verifier"] = pin
+            params["oauth_token"] = token
 
-        sig = self._make_signature(params, self.acct_url, "GET", self.csecret, token_secret)
-        params["oauth_signature"] = sig
+            sig = self._make_signature(params, self.acct_url, "GET", self.csecret, token_secret)
+            params["oauth_signature"] = sig
 
-        # Get Access Token
-        req = urllib2.Request("%s?%s" % (self.acct_url, urllib.urlencode(params)))
-        resp = urllib2.urlopen(req)
+            # Get Access Token
+            req = urllib2.Request("%s?%s" % (self.acct_url, urllib.urlencode(params)))
+            resp = urllib2.urlopen(req)
 
-        print "\t[OK]\n"
+        except (urllib2.HTTPError,urllib2.URLError):
+            print "\t[failed]"
+            print "---! Please retry authorize Boxnya"
+            quit()
+
+        else:
+            print "\t[OK]"
 
         # Parse Access Token
         fin = cgi.parse_qs(resp.read())
@@ -107,11 +114,13 @@ class Userstream(object):
         self.atoken_secret = fin["oauth_token_secret"][0]
 
         oauth_dict = {"atoken":self.atoken, "atoken_secret":self.atoken_secret}
+        if not os.path.exists(os.path.dirname(self.oauth_yaml_path)):
+            os.mkdir(os.path.dirname(self.oauth_yaml_path))
         f = open(self.oauth_yaml_path,"w")
         yaml.dump(oauth_dict, f, encoding="utf8", default_flow_style=False)
         f.close()
 
-        print "* Done."
+        print "---> Done Boxnya authorizing\n"
 
     def _oauth_header(self, params):
         plist = []
@@ -150,7 +159,7 @@ class IMKayac(object):
 class Boxnya(object):
     def __init__(self):
         self.cdir = os.path.abspath(os.path.dirname(__file__))
-        self.settings_yaml_path = os.path.normpath(os.path.join(self.cdir,"settings.yaml"))
+        self.settings_yaml_path = os.path.normpath(os.path.join(self.cdir,"../conf","settings.yaml"))
         self.screen_name = ""
         self.reg_exp = ""
         self.im_id = ""
@@ -170,29 +179,37 @@ class Boxnya(object):
             self.im_sig = settings["im_sig"]
             f.close()
         except IOError:
-            print "Please set your account data.\n"
+            print "---! Please set your account data"
             self.SettingsInitializer()
 
     def SettingsInitializer(self):
-        print "* Please input screen name."
-        self.screen_name = raw_input("->")
-        print "* Please input search keyword. (You can use a regular expression.)"
-        self.reg_exp = raw_input("->")
-        print "* Please input im.kayac userid."
-        self.im_id = raw_input("->")
-        print "* Please input im.kayac password. (optional)"
-        self.im_pswd = raw_input("->")
-        print "* Please input im.kayac private key. (optional)"
-        self.im_sig = raw_input("->")
+        print "---* Please input your screen name."
+        print "->",
+        self.screen_name = raw_input()
+        print "---* Please input your ego search keyword (You can use a regular expression)"
+        print "->",
+        self.reg_exp = raw_input()
+        print "---* Please input your im.kayac.com userid"
+        print "->",
+        self.im_id = raw_input()
+        print "---* Please input your im.kayac.com password (optional)"
+        print "->",
+        self.im_pswd = raw_input()
+        print "---* Please input your im.kayac.com private key (optional)"
+        print "->",
+        self.im_sig = raw_input()
         settings_dict = {"screen_name":self.screen_name,
                          "reg_exp":self.reg_exp,
                          "im_id":self.im_id,
                          "im_pswd":self.im_pswd,
                          "im_sig":self.im_sig
                          }
+        if not os.path.exists(os.path.dirname(self.settings_yaml_path)):
+            os.mkdir(os.path.dirname(self.settings_yaml_path))
         f = open(self.settings_yaml_path,"w")
         yaml.dump(settings_dict, f, encoding="utf8", default_flow_style=False)
         f.close()
+        print "---> Done settings\n"
 
     def _output(self, text):
         self.im.notify(text)
@@ -208,7 +225,7 @@ class Boxnya(object):
         self.im = IMKayac(self.im_id, self.im_pswd, self.im_sig)
         pattern = re.compile(self.reg_exp + "|@%s" % self.screen_name)
         userstream = Userstream()
-        print "---> Boxnya service start"
+        print "---> Boxnya service start in @" + self.screen_name
         stream = userstream.getStream()
         stream.readline()
         stream.readline()
@@ -216,7 +233,7 @@ class Boxnya(object):
             recv = stream.readline()
             try:
                 json = simplejson.loads(recv)
-            except simplejson.JSONDecodeError:
+            except (simplejson.JSONDecodeError,KeyError):
                 pass
             else:
                 if json.get("event") == "favorite" and json.get("target")["screen_name"] == self.screen_name:
