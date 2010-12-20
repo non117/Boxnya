@@ -65,6 +65,8 @@ class Userstream(object):
             # Request Parameters
             params = self._init_params()
 
+            print "---* Get request token:",
+
             # Generate Signature
             sig = self._make_signature(params, self.reqt_url, "GET", self.csecret)
             params["oauth_signature"] = sig
@@ -73,6 +75,15 @@ class Userstream(object):
             req = urllib2.Request("%s?%s" % (self.reqt_url, urllib.urlencode(params)))
             resp = urllib2.urlopen(req)
 
+        except (urllib2.HTTPError,urllib2.URLError):
+            print "\t[failed]"
+            print "---! confirm ConsumerKey and ConsumerSecret OR maybe app is Inactive"
+            quit()
+
+        else:
+            print "\t[OK]"
+
+        try:
             # Parse Token Parameters
             ret = cgi.parse_qs(resp.read())
             token = ret["oauth_token"][0]
