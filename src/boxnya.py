@@ -12,11 +12,23 @@ import yaml
 import datetime
 from time import sleep , time ,strftime,localtime
 import os
+import codecs
+
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('user',help='specify user')
+parser.add_argument('--nofav',action='store_true',help='ignore faved')
+parser.add_argument('--noegosearch',action='store_true',help='igonore egosearch hit')
+parser.add_argument('--nolog',action='store_true',help='no logging')
+parser.add_argument('-q','--quiet',action='store_true',help='quiet mode')
+parser.add_argument('-v','--version',action='version',version='%(prog)s powered by non_117 and dnpp73')
+args = parser.parse_args()
 
 class Userstream(object):
     def __init__(self):
         self.cdir = os.path.abspath(os.path.dirname(__file__))
-        self.oauth_yaml_path = os.path.normpath(os.path.join(self.cdir,"../conf","oauth.yaml"))
+        self.oauth_yaml_path = os.path.normpath(os.path.join(self.cdir,"../conf",args.user,"oauth.yaml"))
         self.ckey = "ZctjpCsuug2VtjfEuceg"
         self.csecret = "pO9WL26Ia9rXyjNavXrit1iclCt1G2J1nRA4jZ6LGc"
         self.reqt_url = 'http://twitter.com/oauth/request_token'
@@ -170,7 +182,8 @@ class IMKayac(object):
 class Boxnya(object):
     def __init__(self):
         self.cdir = os.path.abspath(os.path.dirname(__file__))
-        self.settings_yaml_path = os.path.normpath(os.path.join(self.cdir,"../conf","settings.yaml"))
+        self.settings_yaml_path = os.path.normpath(os.path.join(self.cdir,"../conf",args.user,"settings.yaml"))
+        self.log_path = os.path.normpath(os.path.join(self.cdir,"../log",args.user,"log.txt"))
         self.screen_name = ""
         self.reg_exp = ""
         self.im_id = ""
@@ -225,7 +238,14 @@ class Boxnya(object):
     def _output(self, text):
         self.im.notify(text)
         time = datetime.datetime.today()
-        print "---> ( " + str(time)[:22] + " ) " + text
+        if args.quiet == False:
+            print "---> ( " + str(time)[:22] + " ) " + text
+        if args.nolog == False:
+            if not os.path.exists(os.path.dirname(self.log_path)):
+                os.mkdir(os.path.dirname(self.log_path))
+            f = codecs.open(self.log_path,"a","utf-8","ignore")
+            f.write("( " + str(time)[:22] + " ) " + text + "\n")
+            f.close()
 
     def CheckText(self, text):
         if not text == self.buffer:
@@ -247,10 +267,10 @@ class Boxnya(object):
             except (simplejson.JSONDecodeError,KeyError):
                 pass
             else:
-                if json.get("event") == "favorite" and json.get("target")["screen_name"] == self.screen_name:
+                if json.get("event") == "favorite" and json.get("target")["screen_name"] == self.screen_name and args.nofav == False:
                     text = u"★ "+ json["source"]["screen_name"] + " Favorited: " + json["target_object"]["text"]
                     self.CheckText(text)
-                elif pattern.search(json.get("text","")):
+                elif pattern.search(json.get("text","")) and args.noegosearch == False:
                     text = json["user"]["screen_name"] + ": " + json["text"]
                     self.CheckText(text)
 

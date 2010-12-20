@@ -18,7 +18,9 @@ Androidはよくわかりません。
 easy_install pyyaml
 easy_install simplejson
    をシェルやコマンドプロンプトで実行。
-5. python boxnya.py
+5. python boxnya.py [USER]
 6. oauth認証してください。
 7. 放置しましょう。
-  ※注意：yamlファイルはboxnya.pyと同じディレクトリに置いてください。
+  ※注意：yamlファイルはconf/[USER]ディレクトリに置いてください。
+
+python boxnya.py -h でヘルプ出るから見てね。
