@@ -13,7 +13,6 @@ import datetime
 from time import sleep , time ,strftime,localtime
 import os
 import codecs
-
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -137,6 +136,8 @@ class Userstream(object):
         self.atoken_secret = fin["oauth_token_secret"][0]
 
         oauth_dict = {"atoken":self.atoken, "atoken_secret":self.atoken_secret}
+        if not os.path.exists(os.path.dirname(os.path.dirname(self.oauth_yaml_path))):
+            os.mkdir(os.path.dirname(os.path.dirname(self.oauth_yaml_path)))
         if not os.path.exists(os.path.dirname(self.oauth_yaml_path)):
             os.mkdir(os.path.dirname(self.oauth_yaml_path))
         f = open(self.oauth_yaml_path,"w")
@@ -228,6 +229,8 @@ class Boxnya(object):
                          "im_pswd":self.im_pswd,
                          "im_sig":self.im_sig
                          }
+        if not os.path.exists(os.path.dirname(os.path.dirname(self.settings_yaml_path))):
+            os.mkdir(os.path.dirname(os.path.dirname(self.settings_yaml_path)))
         if not os.path.exists(os.path.dirname(self.settings_yaml_path)):
             os.mkdir(os.path.dirname(self.settings_yaml_path))
         f = open(self.settings_yaml_path,"w")
