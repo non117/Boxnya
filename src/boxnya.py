@@ -12,6 +12,7 @@ import yaml
 import datetime
 from time import sleep , time ,strftime,localtime
 import os
+import sys
 
 class Userstream(object):
     def __init__(self):
@@ -214,7 +215,8 @@ class Boxnya(object):
     def _output(self, text):
         self.im.notify(text)
         time = datetime.datetime.today()
-        print "---> ( " + str(time)[:22] + " ) " + text
+	if sys.stdout.encoding == 'UTF-8':
+            print "---> ( " + str(time)[:22] + " ) " + text
 
     def CheckText(self, text):
         if not text == self.buffer:
