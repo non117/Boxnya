@@ -217,6 +217,8 @@ class Boxnya(object):
         time = datetime.datetime.today()
 	if sys.stdout.encoding == 'UTF-8':
             print "---> ( " + str(time)[:22] + " ) " + text
+	else:
+            print "---> ( " + str(time)[:22] + " ) (text omitted: please use UTF-8 terminal)"
 
     def CheckText(self, text):
         if not text == self.buffer:
