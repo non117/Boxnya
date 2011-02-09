@@ -146,6 +146,8 @@ class IMKayac(object):
         self.id = id
         self.password = password
         self.sig = sig
+        self.retry = 3
+        self.retry_wait = 1
 
     def notify(self,msg):
         if isinstance(msg, unicode): msg = msg.encode('utf-8')
@@ -155,7 +157,17 @@ class IMKayac(object):
             params['password'] = self.password
         if self.sig:
             params['sig'] = hashlib.sha1(msg+self.sig).hexdigest()
-        urllib2.build_opener().open(path, urllib.urlencode(params))
+
+        for x in range(self.retry):
+            try:
+                urllib2.build_opener().open(path, urllib.urlencode(params))
+                break
+            except urllib2.HTTPError, e:
+                if e.code == 500: pass
+                else: raise e
+                sleep(self.retry_wait)
+            except urllib2.URLError:
+                sleep(self.retry_wait)
 
 class Boxnya(object):
     def __init__(self):
