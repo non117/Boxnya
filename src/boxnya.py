@@ -278,6 +278,10 @@ class Boxnya(object):
         stream.readline()
         while True:
             recv = stream.readline()
+	    if recv == '':
+	        stream.close()
+		stream = userstream.getStream()
+		continue
             try:
                 json = simplejson.loads(recv)
             except (simplejson.JSONDecodeError,KeyError):
