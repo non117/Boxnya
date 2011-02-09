@@ -13,6 +13,7 @@ import datetime
 from time import sleep , time ,strftime,localtime
 import os
 import sys
+import signal
 
 class Userstream(object):
     def __init__(self):
@@ -23,6 +24,10 @@ class Userstream(object):
         self.reqt_url = 'http://twitter.com/oauth/request_token'
         self.auth_url = 'http://twitter.com/oauth/authorize'
         self.acct_url = 'http://twitter.com/oauth/access_token'
+        self.connection_timeout = 10
+        self.timeout = 90
+        self.waitsec_start = 30 # should be between 20 and 40
+        self.waitsec_max = 270  # source be between 240 and 300
         self._loadOauth()
 
     def _loadOauth(self):
@@ -139,7 +144,33 @@ class Userstream(object):
 
         req = urllib2.Request(url)
         req.add_header("Authorization", self._oauth_header(params))
-        return urllib2.urlopen(req)
+
+        def handler(signum, frame):
+            raise urllib2.URLError(None)
+
+        waitsec = 0
+        waitpower = 1
+        while True:
+            try:
+                signal.signal(signal.SIGALRM, handler)
+                signal.alarm(self.connection_timeout)
+                strm = urllib2.urlopen(req, None, self.timeout)
+                signal.signal(signal.SIGALRM, signal.SIG_DFL)
+                signal.alarm(0)
+                return strm
+            except urllib2.HTTPError, e:
+                if e.code == 420: waitpower = 2
+            except urllib2.URLError:
+                pass
+            print "---> Connection failure: retry after %d sec " % (waitsec * waitpower)
+            sleep(waitsec * waitpower)
+            if waitsec == 0:
+                waitsec = self.waitsec_start
+            elif waitsec * 2 > self.waitsec_max:
+                waitsec = self.waitsec_max
+            else:
+                waitsec = waitsec * 2
+            waitpower = 1
 
 class IMKayac(object):
     def __init__(self,id,password=None,sig=None):
