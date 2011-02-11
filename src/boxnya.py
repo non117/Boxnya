@@ -14,6 +14,7 @@ from time import sleep , time ,strftime,localtime
 import os
 import sys
 import signal
+import ssl
 
 class Userstream(object):
     def __init__(self):
@@ -277,7 +278,10 @@ class Boxnya(object):
         stream.readline()
         stream.readline()
         while True:
-            recv = stream.readline()
+	    try:
+	    	recv = stream.readline()
+	    except ssl.SSLError:
+	    	recv = '' # handle SSLError as EOF
 	    if recv == '':
 	        stream.close()
 		stream = userstream.getStream()
