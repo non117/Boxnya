@@ -3,3 +3,6 @@
 /log/*
 .DS_Store
 Thumbs.db
+/.pydevproject
+/.project
+/.settings

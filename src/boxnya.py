@@ -12,6 +12,9 @@ import yaml
 import datetime
 from time import sleep , time ,strftime,localtime
 import os
+import sys
+import signal
+import ssl
 import codecs
 import argparse
 
@@ -33,6 +36,10 @@ class Userstream(object):
         self.reqt_url = 'http://twitter.com/oauth/request_token'
         self.auth_url = 'http://twitter.com/oauth/authorize'
         self.acct_url = 'http://twitter.com/oauth/access_token'
+        self.connection_timeout = 10
+        self.timeout = 90
+        self.waitsec_start = 30 # should be between 20 and 40
+        self.waitsec_max = 270  # source be between 240 and 300
         self._loadOauth()
 
     def _loadOauth(self):
@@ -162,13 +169,41 @@ class Userstream(object):
 
         req = urllib2.Request(url)
         req.add_header("Authorization", self._oauth_header(params))
-        return urllib2.urlopen(req)
+
+        def handler(signum, frame):
+            raise urllib2.URLError(None)
+
+        waitsec = 0
+        waitpower = 1
+        while True:
+            try:
+                signal.signal(signal.SIGALRM, handler)
+                signal.alarm(self.connection_timeout)
+                strm = urllib2.urlopen(req, None, self.timeout)
+                signal.signal(signal.SIGALRM, signal.SIG_DFL)
+                signal.alarm(0)
+                return strm
+            except urllib2.HTTPError, e:
+                if e.code == 420: waitpower = 2
+            except urllib2.URLError:
+                pass
+            print "---> Connection failure: retry after %d sec " % (waitsec * waitpower)
+            sleep(waitsec * waitpower)
+            if waitsec == 0:
+                waitsec = self.waitsec_start
+            elif waitsec * 2 > self.waitsec_max:
+                waitsec = self.waitsec_max
+            else:
+                waitsec = waitsec * 2
+            waitpower = 1
 
 class IMKayac(object):
     def __init__(self,id,password=None,sig=None):
         self.id = id
         self.password = password
         self.sig = sig
+        self.retry = 3
+        self.retry_wait = 1
 
     def notify(self,msg):
         if isinstance(msg, unicode): msg = msg.encode('utf-8')
@@ -178,7 +213,17 @@ class IMKayac(object):
             params['password'] = self.password
         if self.sig:
             params['sig'] = hashlib.sha1(msg+self.sig).hexdigest()
-        urllib2.build_opener().open(path, urllib.urlencode(params))
+
+        for x in range(self.retry):
+            try:
+                urllib2.build_opener().open(path, urllib.urlencode(params))
+                break
+            except urllib2.HTTPError, e:
+                if e.code == 500: pass
+                else: raise e
+                sleep(self.retry_wait)
+            except urllib2.URLError:
+                sleep(self.retry_wait)
 
 class Boxnya(object):
     def __init__(self):
@@ -242,7 +287,10 @@ class Boxnya(object):
         self.im.notify(text)
         time = datetime.datetime.today()
         if args.quiet == False:
-            print "---> ( " + str(time)[:22] + " ) " + text
+            if sys.stdout.encoding == 'UTF-8':
+                print "---> ( " + str(time)[:22] + " ) " + text
+            else:
+                print "---> ( " + str(time)[:22] + " ) (text omitted: please use UTF-8 terminal)"
         if args.nolog == False:
             if not os.path.exists(os.path.dirname(self.log_path)):
                 os.mkdir(os.path.dirname(self.log_path))
@@ -265,7 +313,14 @@ class Boxnya(object):
         stream.readline()
         stream.readline()
         while True:
-            recv = stream.readline()
+	    try:
+	    	recv = stream.readline()
+	    except ssl.SSLError:
+	    	recv = '' # handle SSLError as EOF
+	    if recv == '':
+	        stream.close()
+		stream = userstream.getStream()
+		continue
             try:
                 json = simplejson.loads(recv)
             except (simplejson.JSONDecodeError,KeyError):
