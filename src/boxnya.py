@@ -259,7 +259,8 @@ class Boxnya(object):
         self.im = IMKayac(self.im_id, self.im_pswd, self.im_sig)
         pattern = re.compile(self.reg_exp + "|@%s" % self.screen_name)
         userstream = Userstream()
-        print "---> Boxnya service start in @" + self.screen_name
+        if args.quiet == False:
+            print "---> Boxnya service start in @" + self.screen_name
         stream = userstream.getStream()
         stream.readline()
         stream.readline()
