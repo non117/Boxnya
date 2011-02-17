@@ -22,6 +22,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('user',help='specify user')
 parser.add_argument('--nofav',action='store_true',help='ignore faved')
 parser.add_argument('--nofollow',action='store_true',help='ignore followed')
+parser.add_argument('--nodm',action='store_true',help='ignore DM')
 parser.add_argument('--noegosearch',action='store_true',help='igonore egosearch hit')
 parser.add_argument('--nolog',action='store_true',help='no logging')
 parser.add_argument('-q','--quiet',action='store_true',help='quiet mode')
@@ -335,6 +336,9 @@ class Boxnya(object):
                     self.CheckText(text)
                 if json.get("event") == "follow" and json.get("target")["screen_name"] == self.screen_name and json["source"]["screen_name"] != self.screen_name and args.nofollow == False: #follow
                     text = json["source"]["name"] + " (@" + json["source"]["screen_name"] + ") is now following you"
+                    self.CheckText(text)
+                if json.get("direct_message")["sender"]["screen_name"] != self.screen_name and args.nodm == False: #DM
+                    text = "DM from " + json["sender_screen_name"] + ": " + json["text"]
                     self.CheckText(text)
                 elif pattern.search(json.get("text","")) and args.noegosearch == False: #ego search
                     text = json["user"]["screen_name"] + ": " + json["text"]
