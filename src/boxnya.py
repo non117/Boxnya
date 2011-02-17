@@ -329,6 +329,9 @@ class Boxnya(object):
                 if json.get("event") == "favorite" and json.get("target")["screen_name"] == self.screen_name and args.nofav == False:
                     text = u"★ "+ json["source"]["screen_name"] + " Favorited: " + json["target_object"]["text"]
                     self.CheckText(text)
+                if json.get("event") == "unfavorite" and json.get("target")["screen_name"] == self.screen_name and json["source"]["screen_name"] != self.screen_name and args.nofav == False:
+                    text = u"☆ "+ json["source"]["screen_name"] + " Unfavorited: " + json["target_object"]["text"]
+                    self.CheckText(text)
                 elif pattern.search(json.get("text","")) and args.noegosearch == False:
                     text = json["user"]["screen_name"] + ": " + json["text"]
                     self.CheckText(text)
