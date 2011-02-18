@@ -341,13 +341,13 @@ class Boxnya(object):
                     text = json["source"]["name"] + " (@" + json["source"]["screen_name"] + ") is now following you"
                     self.CheckText(text)
                 if json.get("direct_message") and json.get("direct_message")["recipient_screen_name"] == self.screen_name and args.nodm == False: #DM
-                    text = "DM from @" + json["direct_message"]["sender_screen_name"] + ": " + json["direct_message"]["text"]
+                    text = "DM from " + json["direct_message"]["sender_screen_name"] + ": " + json["direct_message"]["text"]
                     self.CheckText(text)
                 if json.get("event") == "list_member_added" and json.get("target")["screen_name"] == self.screen_name and json.get("source")["screen_name"] != self.screen_name and args.nolistadd == False: #added list
-                    text = "@" + json["source"]["screen_name"] + "add you into: " + json["target_object"]["full_name"]
+                    text = u"◆ Added list into: " + json["target_object"]["full_name"]
                     self.CheckText(text)
                 if json.get("event") == "list_member_removed" and json.get("target")["screen_name"] == self.screen_name and json.get("source")["screen_name"] != self.screen_name and args.nolistremove == False: #removed list
-                    text = "@" + json["source"]["screen_name"] + "remove you from: " + json["target_object"]["full_name"]
+                    text = u"◇ Removed list from: " + json["target_object"]["full_name"]
                     self.CheckText(text)
                 elif pattern.search(json.get("text","")) and args.noegosearch == False: #ego search
                     text = json["user"]["screen_name"] + ": " + json["text"]
