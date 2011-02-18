@@ -316,14 +316,14 @@ class Boxnya(object):
         stream.readline()
         stream.readline()
         while True:
-	    try:
-	    	recv = stream.readline()
-	    except ssl.SSLError:
-	    	recv = '' # handle SSLError as EOF
-	    if recv == '':
-	        stream.close()
-		stream = userstream.getStream()
-		continue
+            try:
+                recv = stream.readline()
+            except ssl.SSLError:
+                recv = '' # handle SSLError as EOF
+            if recv == '':
+                stream.close()
+                stream = userstream.getStream()
+                continue
             try:
                 json = simplejson.loads(recv)
             except (simplejson.JSONDecodeError,KeyError):
