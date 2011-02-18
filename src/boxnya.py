@@ -24,6 +24,7 @@ parser.add_argument('--nofav',action='store_true',help='ignore faved')
 parser.add_argument('--nounfav',action='store_true',help='ignore faved')
 parser.add_argument('--nofollow',action='store_true',help='ignore followed')
 parser.add_argument('--nodm',action='store_true',help='ignore DM')
+parser.add_argument('--nolistadd',action='store_true',help='ignore added list')
 parser.add_argument('--noegosearch',action='store_true',help='igonore egosearch hit')
 parser.add_argument('--nolog',action='store_true',help='no logging')
 parser.add_argument('-q','--quiet',action='store_true',help='quiet mode')
@@ -332,14 +333,17 @@ class Boxnya(object):
                 if json.get("event") == "favorite" and json.get("target")["screen_name"] == self.screen_name and args.nofav == False: #fav
                     text = u"★ "+ json["source"]["screen_name"] + " Favorited: " + json["target_object"]["text"]
                     self.CheckText(text)
-                if json.get("event") == "unfavorite" and json.get("target")["screen_name"] == self.screen_name and json["source"]["screen_name"] != self.screen_name and args.nounfav == False: #unfav
+                if json.get("event") == "unfavorite" and json.get("target")["screen_name"] == self.screen_name and json.get("source")["screen_name"] != self.screen_name and args.nounfav == False: #unfav
                     text = u"☆ "+ json["source"]["screen_name"] + " Unfavorited: " + json["target_object"]["text"]
                     self.CheckText(text)
-                if json.get("event") == "follow" and json.get("target")["screen_name"] == self.screen_name and json["source"]["screen_name"] != self.screen_name and args.nofollow == False: #follow
+                if json.get("event") == "follow" and json.get("target")["screen_name"] == self.screen_name and json.get("source")["screen_name"] != self.screen_name and args.nofollow == False: #follow
                     text = json["source"]["name"] + " (@" + json["source"]["screen_name"] + ") is now following you"
                     self.CheckText(text)
                 if json.get("direct_message") and json.get("direct_message")["recipient_screen_name"] == self.screen_name and args.nodm == False: #DM
-                    text = "DM from " + json["direct_message"]["sender_screen_name"] + ": " + json["direct_message"]["text"]
+                    text = "DM from @" + json["direct_message"]["sender_screen_name"] + ": " + json["direct_message"]["text"]
+                    self.CheckText(text)
+                if json.get("event") == "list_member_added" and json.get("target")["screen_name"] == self.screen_name and json.get("source")["screen_name"] != self.screen_name and args.nolistadd == False: #added list
+                    text = "@" + json["source"]["screen_name"] + "add you into: " + json["target_object"]["full_name"]
                     self.CheckText(text)
                 elif pattern.search(json.get("text","")) and args.noegosearch == False: #ego search
                     text = json["user"]["screen_name"] + ": " + json["text"]
