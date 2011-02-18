@@ -25,6 +25,7 @@ parser.add_argument('--nounfav',action='store_true',help='ignore faved')
 parser.add_argument('--nofollow',action='store_true',help='ignore followed')
 parser.add_argument('--nodm',action='store_true',help='ignore DM')
 parser.add_argument('--nolistadd',action='store_true',help='ignore added list')
+parser.add_argument('--nolistremove',action='store_true',help='ignore added list')
 parser.add_argument('--noegosearch',action='store_true',help='igonore egosearch hit')
 parser.add_argument('--nolog',action='store_true',help='no logging')
 parser.add_argument('-q','--quiet',action='store_true',help='quiet mode')
@@ -344,6 +345,9 @@ class Boxnya(object):
                     self.CheckText(text)
                 if json.get("event") == "list_member_added" and json.get("target")["screen_name"] == self.screen_name and json.get("source")["screen_name"] != self.screen_name and args.nolistadd == False: #added list
                     text = "@" + json["source"]["screen_name"] + "add you into: " + json["target_object"]["full_name"]
+                    self.CheckText(text)
+                if json.get("event") == "list_member_removed" and json.get("target")["screen_name"] == self.screen_name and json.get("source")["screen_name"] != self.screen_name and args.nolistremove == False: #removed list
+                    text = "@" + json["source"]["screen_name"] + "remove you from: " + json["target_object"]["full_name"]
                     self.CheckText(text)
                 elif pattern.search(json.get("text","")) and args.noegosearch == False: #ego search
                     text = json["user"]["screen_name"] + ": " + json["text"]
