@@ -192,6 +192,7 @@ class Userstream(object):
                 if e.code == 420: waitpower = 2
             except urllib2.URLError:
                 pass
+            signal.alarm(0)
             print "---> Connection failure: retry after %d sec " % (waitsec * waitpower)
             sleep(waitsec * waitpower)
             if waitsec == 0:
