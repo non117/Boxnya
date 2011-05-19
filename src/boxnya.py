@@ -299,7 +299,7 @@ class Boxnya(object):
                 print "---> ( " + str(time)[:22] + " ) (text omitted: please use UTF-8 terminal)"
         if args.nolog == False:
             if not os.path.exists(os.path.dirname(self.log_path)):
-                os.mkdir(os.path.dirname(self.log_path))
+                os.makedirs(os.path.dirname(self.log_path))
             f = codecs.open(self.log_path,"a","utf-8","ignore")
             f.write("( " + str(time)[:22] + " ) " + text + "\n")
             f.close()
