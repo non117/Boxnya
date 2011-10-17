@@ -10,3 +10,4 @@ RevokeされてTokenが効かなかった場合の処理
 
 --- 2011-10-17 ---
 redmine.non117.comでちまちま作業中.
+branch devに名前変更.
