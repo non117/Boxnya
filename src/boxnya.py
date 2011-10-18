@@ -37,8 +37,10 @@ class Userstream(object):
     def __init__(self):
         self.cdir = os.path.abspath(os.path.dirname(__file__))
         self.oauth_yaml_path = os.path.normpath(os.path.join(self.cdir,"../conf",args.user,"oauth.yaml"))
-        self.ckey = "ZctjpCsuug2VtjfEuceg"
-        self.csecret = "pO9WL26Ia9rXyjNavXrit1iclCt1G2J1nRA4jZ6LGc"
+        #self.ckey = "ZctjpCsuug2VtjfEuceg"
+        #self.csecret = "pO9WL26Ia9rXyjNavXrit1iclCt1G2J1nRA4jZ6LGc"
+        self.ckey = "iq9x3uBBRtQbnK2MEFt1RQ"
+        self.csecret = "usNm30uAhRmTNm008L89t3xgwyTL7foKeHSSH4mBtI8"
         self.reqt_url = 'http://twitter.com/oauth/request_token'
         self.auth_url = 'http://twitter.com/oauth/authorize'
         self.acct_url = 'http://twitter.com/oauth/access_token'
