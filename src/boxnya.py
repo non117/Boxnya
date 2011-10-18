@@ -22,6 +22,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('user',help='specify user')
 parser.add_argument('--nofav',action='store_true',help='ignore faved')
 parser.add_argument('--nounfav',action='store_true',help='ignore faved')
+parser.add_argument('--nort',action='store_true',help='ignore Official RTed')
 parser.add_argument('--nofollow',action='store_true',help='ignore followed')
 parser.add_argument('--nodm',action='store_true',help='ignore DM')
 parser.add_argument('--nolistadd',action='store_true',help='ignore added list')
@@ -311,7 +312,7 @@ class Boxnya(object):
 
     def main(self):
         self.im = IMKayac(self.im_id, self.im_pswd, self.im_sig)
-        pattern = re.compile(self.reg_exp + "|@%s" % self.screen_name)
+        pattern = re.compile(self.reg_exp + "|(?<!RT )@%s" % self.screen_name)
         userstream = Userstream()
         if args.quiet == False:
             print "---> Boxnya service start in @" + self.screen_name
@@ -337,6 +338,9 @@ class Boxnya(object):
                     self.CheckText(text)
                 if json.get("event") == "unfavorite" and json.get("target")["screen_name"] == self.screen_name and json.get("source")["screen_name"] != self.screen_name and args.nounfav == False: #unfav
                     text = u"☆ "+ json["source"]["screen_name"] + " Unfavorited: " + json["target_object"]["text"]
+                    self.CheckText(text)
+                if json.get("retweeted_status") and json.get("retweeted_status")["user"]["screen_name"] == self.screen_name and json.get("user")["screen_name"] != self.screen_name and args.nort == False: #rt
+                    text = u"⇄ "+ json["user"]["screen_name"] + " RTed: " + json["retweeted_status"]["text"]
                     self.CheckText(text)
                 if json.get("event") == "follow" and json.get("target")["screen_name"] == self.screen_name and json.get("source")["screen_name"] != self.screen_name and args.nofollow == False: #follow
                     text = json["source"]["name"] + " (@" + json["source"]["screen_name"] + ") is now following you"
