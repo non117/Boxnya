@@ -12,3 +12,13 @@ input/__init__.pyに↑を書くと, inputフォルダにpythonモジュール�
 >>> mod
 <module 'hoge.thr' from 'hoge/thr.pyc'>
 TODO:これをさらに抽象化し, {name:mod}なモジュールリストを返す関数を作る.
+
+
+こっちの方がよいかも.
+>>> import sys
+>>> name = 'foo.bar.baz'
+>>> __import__(name)
+<module 'foo' from >
+>>> baz = sys.modules[name]
+>>> baz
+<module 'foo.bar.baz' from >
