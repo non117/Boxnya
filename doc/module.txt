@@ -22,3 +22,19 @@ TODO:これをさらに抽象化し, {name:mod}なモジュールリストを返
 >>> baz = sys.modules[name]
 >>> baz
 <module 'foo.bar.baz' from >
+
+
+できた.
+
+__init__.py
+import glob, os
+__all__ = [ os.path.basename(f)[:-3] for f in glob.glob(os.path.dirname(__file__)+"/*.py")]
+
+core.py
+import sys
+def get_module_dict(dirname):
+    name_list = __import__(dirname).__all__
+    name_list.remove('__init__')
+    for name in name_list:
+        __import__(dirname+'.'+name)
+    return dict(zip(name_list,[sys.modules[dirname+'.'+name] for name in name_list]))
