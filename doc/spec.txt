@@ -39,6 +39,17 @@ from:inputの名前
 icon:画像
 (to:どのoutputに渡すか) 実装するか検討中.
 
+= conf =
+/settings.py
+デーモン:True/False # 常にTrueで良い気がしてきた.
+error log:path
+log:path
+if daemon:
+    run-user
+    pid
+inputのconfもまとめるならば,各モジュールの設定をここに.
+confディレクトリに, input-1,input-2,output-1...の方が良いかも.
+
 = その他 =
 inputとoutputは名前がつけられるので, 辞書に格納すると思う.
 旧boxnyaはtwitter APIとメインの処理に分離.

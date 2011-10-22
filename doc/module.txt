@@ -36,5 +36,5 @@ def get_module_dict(dirname):
     name_list = __import__(dirname).__all__
     name_list.remove('__init__')
     for name in name_list:
-        __import__(dirname+'.'+name)
-    return dict(zip(name_list,[sys.modules[dirname+'.'+name] for name in name_list]))
+        __import__('.'.join((dirname,name)))
+    return dict(zip(name_list,[sys.modules['.'.join((dirname,name))] for name in name_list]))
