@@ -32,9 +32,9 @@ __all__ = [ os.path.basename(f)[:-3] for f in glob.glob(os.path.dirname(__file__
 
 core.py
 import sys
-def get_module_dict(dirname):
+def make_module_dict(dirname):
     name_list = __import__(dirname).__all__
     name_list.remove('__init__')
     for name in name_list:
         __import__('.'.join((dirname,name)))
-    return dict(zip(name_list,[sys.modules['.'.join((dirname,name))] for name in name_list]))
+    return dict(zip(name_list,[sys.modules.get('.'.join((dirname,name))) for name in name_list]))

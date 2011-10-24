@@ -1,16 +1,18 @@
-キュー:メッセージを格納する. FIFO.
-エラー格納用キューと一緒にするかどうかが問題.
+メッセージキュー:メッセージを格納する. FIFO無制限
+エラーキュー：FIFO無制限
 inputモジュール辞書
 outputモジュール辞書
 
 メソッド
-・mkmoduledict:モジュール辞書作成
+・make_module_dict:モジュール辞書作成
 ・push(queue):setmsg inputが呼ぶ
 ・pop(queue):getmsg outputが呼ぶ
 ・logger
+・_run
+・start
+・exit
 
 処理
-load settings(__init__)
-mkmoduledict
+make_modul_edict
 for input in inputs: input.start()
 while True: try: queue.get() except: 
