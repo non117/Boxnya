@@ -1,0 +1,9 @@
+("type",object)という形式にする.
+typeは, "message","error","system"など.
+systemはboxnyaの制御コマンド等.
+(将来的に外部から制御できるようにするため)
+objectは, "message"の場合
+(to,summary,text,icon,from)
+メッセージをタプルにするのは, 省メモリでコストが少ない(と思われる)ため.
+inputにmessageを作るメソッドを定義する必要がある.
+messageはmasterのpushメソッドでキューに突っ込む.
