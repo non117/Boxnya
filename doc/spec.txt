@@ -26,18 +26,25 @@ inputとoutputは, 拡張できるようにする.
 2. 設定ファイルの読み込み.
 3. inputとoutputをインスタンス化し, それぞれリストに格納する.
 4. inputリストをforで回して全て起動.
-5. masterはwhileループに入って, inputからの例外が来るか待ち続ける.
+5. masterはwhileループに入って, event.wait()
+eventが来たら, inputからの例外が来るか待ち続ける.
+キューが空になったら再びwait()
 
 = メッセージの流れ =
 1. inputがネットワーク等から情報を取ってくる.
-2. masterのメソッドにメッセージを渡して呼び出す.
-3. masterのメソッドが, outputリストにメッセージを渡す.
+2. masterのキューに突っ込む
+3. masterのメソッドはメッセージを適切なスレッドに渡す.
 
 = メッセージの形式 =
-text:文字列
-from:inputの名前
+text:"文字列"
+from:"inputの名前"
 icon:画像
-(to:どのoutputに渡すか) 実装するか検討中.
+to:(input or output(0,1),(モジュール名))
+
+= エラー処理 =
+1. 例外発生
+2. masterのキューに
+3. エラーを記録して再起動.
 
 = conf =
 /settings.py

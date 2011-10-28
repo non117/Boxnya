@@ -16,3 +16,4 @@ outputモジュール辞書
 make_modul_edict
 for input in inputs: input.start()
 while True: try: queue.get() except: 
+event.wait()
