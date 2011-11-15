@@ -1,0 +1,23 @@
+# Mac
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# emacs
+*~
+
+# vim
+*.swp
+
+# conf
+*.yaml
+/conf/*
+
+# log
+/log/*
+
+# other
+/.pydevproject
+/.project
+/.settings
