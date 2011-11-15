@@ -26,7 +26,7 @@ outputモジュール辞書
 ・exit
 
 処理
-make_modul_edict
+make_module_dict
 for input in inputs: input.start()
 while True: try: queue.get() except: 
 event.wait()
