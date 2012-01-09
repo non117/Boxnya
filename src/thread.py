@@ -10,23 +10,26 @@ class Message(object):
         self.event = event
     def push(self, data):
         self.queue.put_nowait(data)
-        self._wake()
-    def _wake(self):
         self.event.set()
+    def get(self):
+        return self.queue.get_nowait()
+    def empty(self):
+        return self.queue.empty()
+    def wait(self):
+        self.event.wait()
 
 class Module(Thread):
     ''' master, logger, input, outputの基底クラス
         master, logger引数にはそれぞれのMessageオブジェクトが渡される
     '''
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None,
-                  verbose=None, message=None, master=None, logger=None, outputs=[]):
-        self.message = message
+                  verbose=None, master=None, logger=None, outputs=[]):
+        super(self, Module).__init__(self, group, target, name, args, kwargs, verbose)
         self.master = master
         self.logger = logger
         self.outputs = outputs
         self.message = Message(Queue(),Event())
-        super(self, Module).__init__(self, group, target, name, args, kwargs, verbose)
-    def call_master(self, text):
+    def _call_master(self, text):
         data = {"text":text, "from":self.name}
         self.master.push(data)
     def log(self, text, level='info'):
@@ -43,19 +46,20 @@ class Input(Module):
             try:
                 self.loop()
             except:
-                self.call_master(sys.exc_info())
+                self._call_master(sys.exc_info())
     def loop(self):
         ''' このメソッドをオーバーライドしてください '''
         pass
 
 class Output(Module):
-    def catch(self):
+    def run(self):
         while True:
-            self.message.event.wait()
-            if not self.message.queue.empty():
-                self.send()
+            self.message.wait()
+            if not self.message.empty():
+                data = self.message.get()
+                self.send(data)
             else:
-                self.message.event.wait()
-    def send(self):
+                self.message.wait()
+    def send(self, data):
         ''' このメソッドをオーバーライドしてください '''
         pass
