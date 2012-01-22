@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import sys
+import time
 from Queue import Queue
 from threading import Event, Thread
 
-import threading
 class Message(object):
     ''' Moduleオブジェクト間のデータ受け渡しとイベント通知を行う '''
     def __init__(self):
@@ -62,7 +62,7 @@ class Output(Module):
         while not self.stopevent.isSet():
             self.message.wait()
             if not self.message.empty():
-                data = self.message.get()
+                data = self.message.get() #TODO sleep処理. 正規表現で制御コードを受け取ってメッセージを送出しないように
                 self.send(data)
     def send(self, data):
         ''' このメソッドをオーバーライドしてください '''
@@ -116,6 +116,7 @@ class Master(Module):
     def _load_settings(self):
         self.log_settings = None
         self.input_to_output = {"test":["test2", "test3"],} #TODO: あとでかく
+        self.output_to_input = {}
     def _load_modules(self):
         self.input_modules = self._make_module_dict('input')
         self.output_modules = self._make_module_dict('output')
@@ -132,10 +133,12 @@ class Master(Module):
         for obj in self.output_modules.values():
             obj.message.notify()
             obj.stopevent.set()
-            obj.join()
+            obj.join(0.5)
+            continue
         for obj in self.input_modules.values():
             obj.stopevent.set()
-            obj.join()
+            obj.join(0.5)
+            continue
     def _error_handle(self, data):
         print data
     def run(self):

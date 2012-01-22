@@ -7,5 +7,5 @@ class Test(Input):
     def fetch(self):
         if int(datetime.today().strftime("%S")) % 10 == 0:
             self.throw("input->output")
-            time.sleep(5)
-            raise IndexError
+            time.sleep(7)
+            #raise IndexError
