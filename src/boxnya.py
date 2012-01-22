@@ -5,5 +5,6 @@ if __name__ == "__main__":
     master = Master()
     master.start()
     import time
-    time.sleep(60)
+    time.sleep(10)
     master.join()
+    quit()

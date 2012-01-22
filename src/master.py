@@ -3,6 +3,7 @@ import sys
 from Queue import Queue
 from threading import Event, Thread
 
+import threading
 class Message(object):
     ''' Moduleオブジェクト間のデータ受け渡しとイベント通知を行う '''
     def __init__(self):
@@ -14,6 +15,8 @@ class Message(object):
         self.event.clear()
     def get(self):
         return self.queue.get_nowait()
+    def notify(self):
+        self.event.set()
     def empty(self):
         return self.queue.empty()
     def wait(self):
@@ -26,10 +29,12 @@ class Module(Thread):
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None,
                   verbose=None, master=None, logger=None, outputs=[]):
         super(Module, self).__init__(group, target, name, args, kwargs, verbose)
+        self.daemon = True
         self.master = master
         self.logger = logger
         self.outputs = outputs
         self.message = Message()
+        self.stopevent = Event()
     def _call_master(self, text):
         data = {"text":text, "from":self.name}
         self.master.push(data)
@@ -43,18 +48,18 @@ class Module(Thread):
 
 class Input(Module):
     def run(self):
-        while True:
+        while not self.stopevent.isSet():
             try:
-                self.loop()
+                self.fetch()
             except:
                 self._call_master(sys.exc_info())
-    def loop(self):
+    def fetch(self):
         ''' このメソッドをオーバーライドしてください '''
         pass
 
 class Output(Module):
     def run(self):
-        while True:
+        while not self.stopevent.isSet():
             self.message.wait()
             if not self.message.empty():
                 data = self.message.get()
@@ -66,14 +71,14 @@ class Output(Module):
 class Logger(Module):
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None,
                   verbose=None, master=None, settings=None):
-        super(Module, self).__init__(group, target, name, args, kwargs, verbose)
+        super(Logger, self).__init__(group, target, name, args, kwargs, verbose)
         self.master = master
         self.settings = settings
         self.message = Message()
     def _write_log(self, data):
         pass
     def run(self):
-        while True:
+        while not self.stopevent.isSet():
             self.message.wait()
             if not self.message.empty():
                 data = self.message.get()
@@ -118,26 +123,33 @@ class Master(Module):
             print "empty" #TODO: log
             quit()
     def _start_modules(self):
+        self.logger.start()
         for obj in self.output_modules.values():
             obj.start()
         for obj in self.input_modules.values():
             obj.start()
     def _stop_modules(self):
         for obj in self.output_modules.values():
-            obj.message.wait()
+            obj.message.notify()
+            obj.stopevent.set()
             obj.join()
         for obj in self.input_modules.values():
+            obj.stopevent.set()
             obj.join()
     def _error_handle(self, data):
-        pass
+        print data
     def run(self):
         self._start_modules()
-        while True:
+        while not self.stopevent.isSet():
             self.message.wait()
             if not self.message.empty():
                 data = self.message.get()
                 self._error_handle(data)
-    def join(self):
+    def join(self, timeout=None):
         self._stop_modules()
-        self.logger.message.wait()
+        self.logger.message.notify()
+        self.logger.stopevent.set()
         self.logger.join()
+        self.message.notify()
+        self.stopevent.set()
+        super(Master, self).join(timeout)
