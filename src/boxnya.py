@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
-from master import Master
+import time
+from core import Master
 
 if __name__ == "__main__":
-    master = Master()
-    master.start()
-    import time
-    time.sleep(10)
+    try:
+        master = Master()
+        master.start()
+        time.sleep(15)
+    except KeyboardInterrupt:
+        pass
     master.join()
     quit()

@@ -1,1 +1,22 @@
 # -*- coding: utf-8 -*-
+
+# System Settings
+LOGDIR = ""
+
+# Module Settings
+# In-Out
+# Input-to-Output matrix must be set like following dictionary.
+# "Input1", "Output1" is a name of these modules.
+# {"Input1":["Output1, Output2..."]
+#  "Input2":["Output2, Output3..."]
+# ...
+# }
+# If Outputs list is [] or None, all Output modules are used.
+INOUT = {"test":[]}
+
+# Module Configure
+# Input
+TEST_SETTINGS = {}
+
+# Output
+TEST2_SETTINGS = {}
