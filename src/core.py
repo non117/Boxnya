@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
+import logging
+import os
 import sys
+import traceback
+from logging.handlers import RotatingFileHandler
 from Queue import Queue
 from threading import Event, Thread
 
@@ -36,17 +40,18 @@ class Module(Thread):
         self.outputs = outputs
         self.message = Message()
         self.stopevent = Event()
-    def _call_master(self, text):
-        data = {"text":text, "from":self.name}
-        self.master.push(data)
-    def log(self, text, level='info'):
-        data = {"text":text, "from":self.name, "level":level}
-        self.logger.push(data)
+    def _call_master(self, data):
+        mes = {"data":data, "from":self.name}
+        self.master.message.push(mes)
+    def log(self, text, level='INFO'):
+        mes = {"text":text, "from":self.name, "level":level.upper()}
+        if self.logger:
+            self.logger.message.push(mes)
     def throw(self, text, icon=None):
         ''' 普通はこれでメッセージを投げる '''
-        data = {"text":text, "from":self.name, "icon":icon}
+        mes = {"text":text, "from":self.name, "icon":icon}
         for output in self.outputs:
-            output.push(data)
+            output.push(mes)
 
 class Input(Module):
     def fetch(self):
@@ -69,7 +74,7 @@ class Output(Module):
         try:
             while not self.stopevent.is_set():
                 self.message.wait()
-                if not self.message.empty():
+                while not self.message.empty():
                     data = self.message.get()
                     self.send(data)
         except Exception:
@@ -81,36 +86,57 @@ class Logger(Module):
         super(Logger, self).__init__(group, target, name, args, kwargs, verbose)
         self.master = master
         self.logger = self
-        self.settings = settings
+        self.dir = settings["dir"]
+        self.mod = settings["mod"]
+        self.loggers = {}
+        self.loggers["system"] = self._logger_fuctory("system")
+        for name in self.mod:
+            self.loggers[name] = self._logger_fuctory(name)
+    def _logger_fuctory(self, name):
+        logger = logging.getLogger(name)
+        logger.setLevel(logging.INFO)
+        handler = RotatingFileHandler(os.path.join(self.dir, "%s.log" % name), maxBytes=1000000, backupCount=5)
+        formatter = logging.Formatter(fmt="%(asctime)s %(levelname)s %(message)s", datefmt="%b %d %H:%M:%S %Y")
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        return logger
     def _write(self, data):
-        pass
+        level = getattr(logging, data["level"], logging.INFO)
+        self.loggers[data["from"]].log(level, data["text"])
+        if level >= logging.ERROR:
+            self.throw(data["text"])
     def run(self):
         try:
-            while not self.stopevent.isSet():
+            while not self.stopevent.is_set():
                 self.message.wait()
-                if not self.message.empty():
+                while not self.message.empty():
                     data = self.message.get()
-                    self._write_log(data)
+                    self._write(data)
         except Exception:
             self._call_master(sys.exc_info())
 
 class Master(Module):
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, verbose=None):
-        super(Master, self).__init__(group, target, name, args, kwargs, verbose)
+        super(Master, self).__init__(group, target, "system", args, kwargs, verbose)
         self._load_settings()
+        self.logger = Logger(master=self, settings=self.log_settings) if self.logging else None
+        self.logger.start()
+        self.log("Boxnya system started.")
         self._load_modules()
-        self.logger = Logger(settings=self.log_settings)
+        log_outputs = settings.LOG_OUT or self.output_modules.keys()
+        
         self.output_instances, self.input_instances, self.outputs = {},{}, {}
         self.outputs, self.output_messages = {}, {}
         for mod_name, output in self.output_modules.items(): #出力モジュールをインスタンス化
-            obj = output(name=mod_name, kwargs=None, master=self.message, logger=self.logger.message)
+            obj = output(name=mod_name, kwargs=None, master=self, logger=self.logger)
             self.output_instances[mod_name] = obj
             self.output_messages[mod_name] = obj.message
+        self.logger.outputs = [mes for name, mes in self.output_messages.items() if name in log_outputs]
         for mod_name, input in self.input_modules.items(): #入力モジュールに出力先のメッセージを渡してインスタンス化
-            output_list = [obj for name, obj in self.output_messages.items() if name in self.input_to_output.get(mod_name)]
+            output_list = [mes for name, mes in self.output_messages.items() if name in self.input_to_output.get(mod_name)]
             self.outputs[mod_name] = output_list
-            self.input_instances[mod_name] = input(name=mod_name, kwargs=None, master=self.message, 
-                                                 logger=self.logger.message, outputs=output_list)
+            self.input_instances[mod_name] = input(name=mod_name, kwargs=None, master=self, 
+                                                 logger=self.logger, outputs=output_list)
     def _make_module_dict(self, dirname):
         ''' ディレクトリ名を引数にとって, ディレクトリ内のモジュール名と同名のクラスを全て読み込む. '''
         name_list = __import__(dirname).__all__
@@ -126,29 +152,44 @@ class Master(Module):
                 pass
         return module_dict
     def _load_settings(self):
-        self.log_settings = settings.LOGDIR
+        self.logging = settings.LOGGING
+        if self.logging:
+            if not settings.LOG_DIR:
+                logpath = os.path.join(os.path.dirname(os.path.abspath(__file__)),"log")
+            else:
+                logpath = settings.LOG_DIR
+            if not os.path.exists(logpath):
+                try:
+                    os.makedirs(logpath)
+                except os.error:
+                    print "cannot make logdir" #TODO: stdout
+            self.log_settings = {"dir":logpath, "mod":settings.LOG_MOD}
         self.input_to_output = settings.INOUT
     def _load_modules(self):
         self.input_modules = self._make_module_dict('input')
         self.output_modules = self._make_module_dict('output')
         if not self.input_modules or not self.output_modules:
-            print "empty" #TODO: log
+            self.log("INPUT or OUTPUT setting is empty.")
+            self.log("terminate Boxnya.")
             quit()
         for key, io in self.input_to_output.items(): # Outputsが空の場合の処理
             if not io:
                 self.input_to_output[key] = self.output_modules.keys()
     def run(self):
-        self.logger.start()
         for obj in self.output_instances.values() + self.input_instances.values():
             obj.start()
-        while not self.stopevent.isSet():
+        self.log("Boxnya module run.")
+        while not self.stopevent.is_set():
             self.message.wait()
-            if not self.message.empty():
+            while not self.message.empty():
                 data = self.message.get()
                 self._error_handle(data)
-    def _error_handle(self, data):
-        print data #TODO: log
-        self.start_module("name")
+    def _error_handle(self, exc):
+        log_text = "Exception has occured in %s : %s %s" %(exc["from"],
+                                                           str(traceback.format_tb(exc["data"][2])),
+                                                           str(exc["data"][1]))
+        self.log(log_text, level="ERROR")
+        self.start_module(exc["from"])
     def join(self, timeout=None):
         for obj in self.output_instances.values():
             obj.message.notify()
@@ -159,6 +200,8 @@ class Master(Module):
             obj.stopevent.set()
             obj.join(0.5)
             continue
+        self.log("Boxnya module terminated.")
+        self.log("Boxnya system terminate.")
         self.logger.message.notify()
         self.logger.stopevent.set()
         self.logger.join()
@@ -167,24 +210,26 @@ class Master(Module):
         super(Master, self).join(timeout)
     def start_module(self, name):
         if name in self.input_modules:
-            obj = self.input_modules[name](name=name, kwargs=None, master=self.message, 
-                                logger=self.logger.message, outputs=self.outputs[name])
+            obj = self.input_modules[name](name=name, kwargs=None, master=self, 
+                                logger=self.logger, outputs=self.outputs[name])
             obj.start()
             self.input_instances[name] = obj
         elif name in self.output_modules:
-            obj = self.output_modules[name](name=name, kwargs=None, master=self.message, 
-                                                            logger=self.logger.message)
+            obj = self.output_modules[name](name=name, kwargs=None, master=self, logger=self.logger)
             obj.message = self.output_messages[name]
             obj.start()
             self.output_instances[name] = obj
     def stop_module(self, name):
         if name in self.input_instances:
             obj = self.input_instances[name]
+            obj.stopevent.set()
+            obj.join(10)
+            if not obj.is_alive():
+                self.input_instances.pop(name)
         elif name in self.output_instances:
             obj = self.output_instances[name]
             obj.message.notify()
-        else:
-            return False
-        obj.stopevent.set()
-        obj.join(10)
-        return False if obj.is_alive() else True
+            obj.stopevent.set()
+            obj.join(10)
+            if not obj.is_alive():
+                self.output_instances.pop(name)

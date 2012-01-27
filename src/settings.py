@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
 # System Settings
-LOGDIR = ""
+LOGGING = True
+LOG_DIR = ""
+LOG_OUT = ["test2"]
+LOG_MOD = ["test"]
 
 # Module Settings
 # In-Out

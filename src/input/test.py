@@ -5,7 +5,6 @@ import time
 
 class Test(Input):
     def fetch(self):
-        if int(datetime.today().strftime("%S")) % 10 == 0:
+        if int(datetime.today().strftime("%S")) % 5 == 0:
             self.throw("input->output")
             time.sleep(1)
-            #raise IndexError
