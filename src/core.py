@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import copy
 import logging
 import os
 import sys
@@ -6,8 +7,6 @@ import traceback
 from logging.handlers import RotatingFileHandler
 from Queue import Queue
 from threading import Event, Thread
-
-import settings
 
 class Message(object):
     ''' Moduleオブジェクト間のデータ受け渡しとイベント通知を行う '''
@@ -22,6 +21,9 @@ class Message(object):
         return self.queue.get_nowait()
     def notify(self): # 起きろ
         self.event.set()
+    def clear(self):
+        while not self.empty():
+            self.get()
     def empty(self): # 空？
         return self.queue.empty()
     def wait(self): # ブロック
@@ -34,6 +36,10 @@ class Module(Thread):
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None,
                   verbose=None, master=None, logger=None, outputs=[]):
         super(Module, self).__init__(group, target, name, args, kwargs, verbose)
+        if isinstance(kwargs, dict):
+            for k,v in kwargs.items():
+                if not k in ("name", "master", "logger", "outputs"):
+                    setattr(self, k, v)
         self.daemon = True
         self.master = master
         self.logger = logger
@@ -116,27 +122,32 @@ class Logger(Module):
             self._call_master(sys.exc_info())
 
 class Master(Module):
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, verbose=None):
+    def __init__(self, settings, group=None, target=None, name=None, args=(), kwargs=None, verbose=None):
         super(Master, self).__init__(group, target, "system", args, kwargs, verbose)
-        self._load_settings()
-        self.logger = Logger(master=self, settings=self.log_settings) if self.logging else None
-        self.logger.start()
+        self._load_settings(settings)
+        if self.logging: # ロガーの起動
+            self.logger = Logger(master=self, settings=self.log_settings)
+            self.logger.start()
         self.log("Boxnya system started.")
         self._load_modules()
-        log_outputs = settings.LOG_OUT or self.output_modules.keys()
-        
-        self.output_instances, self.input_instances, self.outputs = {},{}, {}
+        self.output_instances, self.input_instances = {},{}
         self.outputs, self.output_messages = {}, {}
+        
         for mod_name, output in self.output_modules.items(): #出力モジュールをインスタンス化
-            obj = output(name=mod_name, kwargs=None, master=self, logger=self.logger)
+            obj = output(name=mod_name, kwargs=self.output_settings.get(mod_name), master=self, logger=self.logger)
             self.output_instances[mod_name] = obj
             self.output_messages[mod_name] = obj.message
-        self.logger.outputs = [mes for name, mes in self.output_messages.items() if name in log_outputs]
+        
+        if self.logging:# ロガーのエラー出力先
+            log_outputs = settings.LOG_OUT or self.output_modules.keys()
+            self.logger.outputs = [mes for name, mes in self.output_messages.items() if name.split(".")[0] in log_outputs]
+        
         for mod_name, input in self.input_modules.items(): #入力モジュールに出力先のメッセージを渡してインスタンス化
-            output_list = [mes for name, mes in self.output_messages.items() if name in self.input_to_output.get(mod_name)]
+            output_list = [mes for name, mes in self.output_messages.items() 
+                           if name.split(".")[0] in self.input_to_output.get(mod_name.split(".")[0])]
             self.outputs[mod_name] = output_list
-            self.input_instances[mod_name] = input(name=mod_name, kwargs=None, master=self, 
-                                                 logger=self.logger, outputs=output_list)
+            self.input_instances[mod_name] = input(name=mod_name, kwargs=self.input_settings.get(mod_name),
+                                                    master=self, logger=self.logger, outputs=output_list)
     def _make_module_dict(self, dirname):
         ''' ディレクトリ名を引数にとって, ディレクトリ内のモジュール名と同名のクラスを全て読み込む. '''
         name_list = __import__(dirname).__all__
@@ -151,10 +162,10 @@ class Master(Module):
             except AttributeError:
                 pass
         return module_dict
-    def _load_settings(self):
-        self.logging = settings.LOGGING
+    def _load_settings(self, settings):
+        self.logging = getattr(settings, "LOGGING", False)
         if self.logging:
-            if not settings.LOG_DIR:
+            if not getattr(settings, "LOG_DIR", ""):
                 logpath = os.path.join(os.path.dirname(os.path.abspath(__file__)),"log")
             else:
                 logpath = settings.LOG_DIR
@@ -162,19 +173,49 @@ class Master(Module):
                 try:
                     os.makedirs(logpath)
                 except os.error:
-                    print "cannot make logdir" #TODO: stdout
-            self.log_settings = {"dir":logpath, "mod":settings.LOG_MOD}
+                    sys.exit("Error : Cannot make log directory.")
+            self.log_settings = {"dir":logpath, "mod":getattr(settings, "LOG_MOD", [])}
+        if not getattr(settings, "INOUT", {}):
+            print "nothing inout"
         self.input_to_output = settings.INOUT
+        self.input_settings = getattr(settings, "INPUT_SETTINGS", {})
+        self.output_settings = getattr(settings, "OUTPUT_SETTINGS", {})
     def _load_modules(self):
         self.input_modules = self._make_module_dict('input')
         self.output_modules = self._make_module_dict('output')
         if not self.input_modules or not self.output_modules:
-            self.log("INPUT or OUTPUT setting is empty.")
-            self.log("terminate Boxnya.")
-            quit()
+            self.log("no INPUT or OUTPUT module.", "ERROR")
+            self.log("Boxnya system terminate.")
+            sys.exit("Error : no INPUT or OUTPUT module.")
         for key, io in self.input_to_output.items(): # Outputsが空の場合の処理
             if not io:
                 self.input_to_output[key] = self.output_modules.keys()
+        if self.input_settings:
+            self._bear_modules(self.input_settings)
+        if self.output_settings:
+            self._bear_modules(self.output_settings)
+    def _bear_modules(self, configs):
+        ''' settingsにモジュールを多重化するように書いてあれば, そのモジュールをforkしておく. '''
+        for name, confs in configs.items():
+            if isinstance(confs, list):
+                for i,c in enumerate(confs):
+                    if i==0:
+                        configs[name] = c
+                    else:
+                        new_name = "%s.%d" % (name, i)
+                        configs[new_name] = c
+                        self._fork(new_name)
+    def _fork(self, name):
+        '''' モジュールをforkする. forkされた新しいモジュールの名前は, "hoge.1","hoge.2"になる. '''
+        original_name = name.split(".")[0]
+        if original_name in self.input_modules:
+            mod = self.input_modules[original_name]
+            mod = copy.deepcopy(mod)
+            self.input_modules[name] = mod
+        elif original_name in self.output_modules:
+            mod = self.output_modules[original_name]
+            mod = copy.deepcopy(mod)
+            self.output_modules[name] = mod
     def run(self):
         for obj in self.output_instances.values() + self.input_instances.values():
             obj.start()
@@ -190,7 +231,7 @@ class Master(Module):
                                                            str(exc["data"][1]))
         self.log(log_text, level="ERROR")
         self.start_module(exc["from"])
-    def join(self, timeout=None):
+    def join(self, timeout=None, errmsg=""):
         for obj in self.output_instances.values():
             obj.message.notify()
             obj.stopevent.set()
@@ -210,13 +251,15 @@ class Master(Module):
         super(Master, self).join(timeout)
     def start_module(self, name):
         if name in self.input_modules:
-            obj = self.input_modules[name](name=name, kwargs=None, master=self, 
-                                logger=self.logger, outputs=self.outputs[name])
+            obj = self.input_modules[name](name=name, kwargs=self.input_settings.get(name),
+                                master=self, logger=self.logger, outputs=self.outputs[name])
             obj.start()
             self.input_instances[name] = obj
         elif name in self.output_modules:
-            obj = self.output_modules[name](name=name, kwargs=None, master=self, logger=self.logger)
+            obj = self.output_modules[name](name=name, kwargs=self.output_settings.get(name),
+                                            master=self, logger=self.logger)
             obj.message = self.output_messages[name]
+            obj.message.clear()
             obj.start()
             self.output_instances[name] = obj
     def stop_module(self, name):

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # System Settings
+DAEMON = False
 LOGGING = True
 LOG_DIR = ""
 LOG_OUT = ["test2"]
@@ -19,7 +20,10 @@ INOUT = {"test":[]}
 
 # Module Configure
 # Input
-TEST_SETTINGS = {}
+INPUT_SETTINGS = {
+                  "test":{"token":1},
+                  }
 
 # Output
-TEST2_SETTINGS = {}
+OUTPUT_SETTINGS = {"test2":{"a":1},
+                   }

@@ -6,5 +6,6 @@ import time
 class Test(Input):
     def fetch(self):
         if int(datetime.today().strftime("%S")) % 5 == 0:
-            self.throw("input->output")
+            self.throw("message")
+            self.log(self.name)
             time.sleep(1)
