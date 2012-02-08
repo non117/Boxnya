@@ -16,7 +16,9 @@ LOG_MOD = ["test"]
 # ...
 # }
 # If Outputs list is [] or None, all Output modules are used.
-INOUT = {"test":[]}
+INOUT = {"test":[],
+         "test4":[]
+         }
 
 # Module Configure
 # Input
@@ -24,6 +26,9 @@ INPUT_SETTINGS = {
                   "test":{"token":1},
                   }
 
+FILTER_SETTINGS = {}
+
 # Output
 OUTPUT_SETTINGS = {"test2":{"a":1},
+                   "imkayac":{"username":"", "password":"", "sig": ""}
                    }

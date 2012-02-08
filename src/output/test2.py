@@ -3,4 +3,4 @@ from core import Output
 
 class Test2(Output):
     def send(self, data):
-        print self.name
+        print data.get("from"),"->",self.name

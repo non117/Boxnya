@@ -1,44 +1,28 @@
 #coding:utf-8
 import urllib, urllib2
-import signal
-from time import sleep
+from twitter.oauth import OAuth
 
 class Api():
-    def __init__(self, oauth_instance):
-        self.oauth = oauth_instance
-        self.connection_timeout = 10
-        self.timeout = 90
-        self.waitsec_start = 30 # should be between 20 and 40
-        self.waitsec_max = 270  # source be between 240 and 300
+    def __init__(self, ckey, csecret, atoken, atokensecret):
+        self.oauth = OAuth(ckey, csecret, atoken, atokensecret)
     
-    def getStream(self):
-        url ='https://userstream.twitter.com/2/user.json'
-        req = self.oauth.generate_request(url)
+    def userstream(self):
+        url = 'https://userstream.twitter.com/2/user.json'
+        req = self.oauth.base(url, "GET")
+        response = urllib2.urlopen(req)
+        response.readline()
+        response.readline()
+        return response.readline()
     
-        def handler(signum, frame):
-            raise urllib2.URLError(None)
+    def update(self, post):
+        url = "https://api.twitter.com/1/statuses/update.json"
+        if isinstance(post, unicode): post = post.encode("utf-8")
+        else: post = str(post)
+        post = urllib.quote(post, "")
+        request = self.oauth.base(url, "POST", {"status":post})
+        return urllib2.urlopen(request).read()
     
-        waitsec = 0
-        waitpower = 1
-        while True:
-            try:
-                signal.signal(signal.SIGALRM, handler)
-                signal.alarm(self.connection_timeout)
-                strm = urllib2.urlopen(req, None, self.timeout)
-                signal.signal(signal.SIGALRM, signal.SIG_DFL)
-                signal.alarm(0)
-                return strm
-            except urllib2.HTTPError, e:
-                if e.code == 420: waitpower = 2
-            except urllib2.URLError:
-                pass
-            signal.alarm(0)
-            print "---> Connection failure: retry after %d sec " % (waitsec * waitpower)
-            sleep(waitsec * waitpower)
-            if waitsec == 0:
-                waitsec = self.waitsec_start
-            elif waitsec * 2 > self.waitsec_max:
-                waitsec = self.waitsec_max
-            else:
-                waitsec = waitsec * 2
-            waitpower = 1
+    def timeline(self):
+        url = "https://api.twitter.com/1/statuses/home_timeline.json"
+        request = self.oauth.base(url, "GET", {"count":"5"})
+        return urllib2.urlopen(request).read()

@@ -13,20 +13,20 @@ class Message(object):
     def __init__(self):
         self.queue = Queue()
         self.event = Event()
-    def push(self, data):# メッセージを突っ込む
+    def push(self, data):
         self.queue.put_nowait(data)
         self.event.set()
         self.event.clear()
-    def get(self):# メッセージを取り出す
+    def get(self):
         return self.queue.get_nowait()
-    def notify(self): # 起きろ
+    def notify(self):
         self.event.set()
     def clear(self):
         while not self.empty():
             self.get()
-    def empty(self): # 空？
+    def empty(self):
         return self.queue.empty()
-    def wait(self): # ブロック
+    def wait(self):
         self.event.wait()
 
 class Module(Thread):
@@ -46,37 +46,37 @@ class Module(Thread):
         self.outputs = outputs
         self.message = Message()
         self.stopevent = Event()
-    def _call_master(self, data):
+        self.prevlog = None
+    def call_master(self, data):
         mes = {"data":data, "from":self.name}
         self.master.message.push(mes)
     def log(self, text, level='INFO'):
         mes = {"text":text, "from":self.name, "level":level.upper()}
-        if self.logger:
+        if self.logger and self.prevlog != mes:
             self.logger.message.push(mes)
+            self.prevlog = mes
     def throw(self, text, icon=None):
-        ''' 普通はこれでメッセージを投げる '''
+        ''' これでメッセージを投げる '''
         mes = {"text":text, "from":self.name, "icon":icon}
         for output in self.outputs:
-            output.push(mes)
+            output.push(copy.deepcopy(mes))
 
 class Input(Module):
     def fetch(self):
         ''' このメソッドをオーバーライドしてください '''
         pass
     def run(self):
-        ''' これはあまりオーバーライドしてほしくない '''
         try:
             while not self.stopevent.is_set():
                 self.fetch()
         except Exception:
-            self._call_master(sys.exc_info())
+            self.call_master(sys.exc_info())
 
 class Output(Module):
     def send(self, data):
         ''' このメソッドをオーバーライドしてください '''
         pass
     def run(self):
-        ''' これはあまりオーバーライドしてほしくない '''
         try:
             while not self.stopevent.is_set():
                 self.message.wait()
@@ -84,7 +84,15 @@ class Output(Module):
                     data = self.message.get()
                     self.send(data)
         except Exception:
-            self._call_master(sys.exc_info())
+            self.call_master(sys.exc_info())
+            
+class Filter(Output):
+    def filter(self, data):
+        ''' フィルター処理をここに書く '''
+        return data
+    def send(self, data):
+        data = self.filter(data)
+        self.throw(data.get("text"), data.get("icon"))
 
 class Logger(Module):
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None,
@@ -119,7 +127,7 @@ class Logger(Module):
                     data = self.message.get()
                     self._write(data)
         except Exception:
-            self._call_master(sys.exc_info())
+            self.call_master(sys.exc_info())
 
 class Master(Module):
     def __init__(self, settings, group=None, target=None, name=None, args=(), kwargs=None, verbose=None):
@@ -130,8 +138,8 @@ class Master(Module):
             self.logger.start()
         self.log("Boxnya system started.")
         self._load_modules()
-        self.output_instances, self.input_instances = {},{}
-        self.outputs, self.output_messages = {}, {}
+        self.output_instances, self.input_instances, self.filter_instances = {},{},{}
+        self.filter_messages, self.outputs, self.output_messages = {},{},{}
         
         for mod_name, output in self.output_modules.items(): #出力モジュールをインスタンス化
             obj = output(name=mod_name, kwargs=self.output_settings.get(mod_name), master=self, logger=self.logger)
@@ -142,8 +150,17 @@ class Master(Module):
             log_outputs = settings.LOG_OUT or self.output_modules.keys()
             self.logger.outputs = [mes for name, mes in self.output_messages.items() if name.split(".")[0] in log_outputs]
         
+        for mod_name, filter in self.filter_modules.items(): #フィルターに出力先を渡してインスタンス化
+            output_list = [mes for name, mes in self.output_messages.items()
+                           if name.split(".")[0] in self.input_to_output.get(mod_name)]
+            self.outputs[mod_name] = output_list
+            obj = filter(name=mod_name, kwargs=self.filter_settings.get(mod_name),
+                                                     master=self, logger=self.logger, outputs=output_list)
+            self.filter_instances[mod_name] = obj
+            self.filter_messages[mod_name] = obj.message
+        
         for mod_name, input in self.input_modules.items(): #入力モジュールに出力先のメッセージを渡してインスタンス化
-            output_list = [mes for name, mes in self.output_messages.items() 
+            output_list = [mes for name, mes in self.output_messages.items() + self.filter_messages.items()
                            if name.split(".")[0] in self.input_to_output.get(mod_name.split(".")[0])]
             self.outputs[mod_name] = output_list
             self.input_instances[mod_name] = input(name=mod_name, kwargs=self.input_settings.get(mod_name),
@@ -180,15 +197,19 @@ class Master(Module):
         self.input_to_output = settings.INOUT
         self.input_settings = getattr(settings, "INPUT_SETTINGS", {})
         self.output_settings = getattr(settings, "OUTPUT_SETTINGS", {})
+        self.filter_settings = getattr(settings, "FILTER_SETTINGS", {})
     def _load_modules(self):
         self.input_modules = self._make_module_dict('input')
         self.output_modules = self._make_module_dict('output')
+        self.filter_modules = self._make_module_dict("filter")
         if not self.input_modules or not self.output_modules:
             self.log("no INPUT or OUTPUT module.", "ERROR")
             self.log("Boxnya system terminate.")
             sys.exit("Error : no INPUT or OUTPUT module.")
         for key, io in self.input_to_output.items(): # Outputsが空の場合の処理
-            if not io:
+            if not io and key in self.input_modules:
+                self.input_to_output[key] = self.output_modules.keys() + self.filter_modules.keys()
+            elif not io and key in self.filter_modules:
                 self.input_to_output[key] = self.output_modules.keys()
         if self.input_settings:
             self._bear_modules(self.input_settings)
@@ -217,7 +238,7 @@ class Master(Module):
             mod = copy.deepcopy(mod)
             self.output_modules[name] = mod
     def run(self):
-        for obj in self.output_instances.values() + self.input_instances.values():
+        for obj in self.output_instances.values() + self.input_instances.values() + self.filter_instances.values():
             obj.start()
         self.log("Boxnya module run.")
         while not self.stopevent.is_set():
@@ -232,14 +253,14 @@ class Master(Module):
         self.log(log_text, level="ERROR")
         self.start_module(exc["from"])
     def join(self, timeout=None, errmsg=""):
-        for obj in self.output_instances.values():
+        for obj in self.output_instances.values() + self.filter_instances.values():
             obj.message.notify()
             obj.stopevent.set()
-            obj.join(0.5)
+            obj.join(0.2)
             continue
         for obj in self.input_instances.values():
             obj.stopevent.set()
-            obj.join(0.5)
+            obj.join(0.2)
             continue
         self.log("Boxnya module terminated.")
         self.log("Boxnya system terminate.")
@@ -255,6 +276,13 @@ class Master(Module):
                                 master=self, logger=self.logger, outputs=self.outputs[name])
             obj.start()
             self.input_instances[name] = obj
+        elif name in self.filter_modules:
+            obj = self.filter_modules[name](name=name, kwargs=self.filter_settings.get(name),
+                                master=self, logger=self.logger, outputs=self.outputs[name])
+            obj.message = self.filter_messages[name]
+            obj.message.clear()
+            obj.start()
+            self.filter_instances[name] = obj
         elif name in self.output_modules:
             obj = self.output_modules[name](name=name, kwargs=self.output_settings.get(name),
                                             master=self, logger=self.logger)
@@ -266,13 +294,20 @@ class Master(Module):
         if name in self.input_instances:
             obj = self.input_instances[name]
             obj.stopevent.set()
-            obj.join(10)
+            obj.join(1)
             if not obj.is_alive():
                 self.input_instances.pop(name)
+        elif name in self.filter_instances:
+            obj = self.filter_instances[name]
+            obj.message.notify()
+            obj.stopevent.set()
+            obj.join(1)
+            if not obj.is_alive():
+                self.filter_instances.pop(name)
         elif name in self.output_instances:
             obj = self.output_instances[name]
             obj.message.notify()
             obj.stopevent.set()
-            obj.join(10)
+            obj.join(1)
             if not obj.is_alive():
                 self.output_instances.pop(name)
