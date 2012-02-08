@@ -24,6 +24,7 @@ INOUT = {"test":[],
 # Input
 INPUT_SETTINGS = {
                   "test":{"token":1},
+                  "gmail":{"username":"", "password":""}
                   }
 
 FILTER_SETTINGS = {}

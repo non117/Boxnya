@@ -47,6 +47,16 @@ class Module(Thread):
         self.message = Message()
         self.stopevent = Event()
         self.prevlog = None
+        self.init()
+    def init(self):
+        ''' 初期処理をここに書く '''
+        pass
+    def cleanup(self):
+        ''' 終了時の処理をここに書く '''
+        pass
+    def join(self, timeout=None, errmsg=""):
+        self.cleanup()
+        super(Module, self).join(timeout, errmsg)
     def call_master(self, data):
         mes = {"data":data, "from":self.name}
         self.master.message.push(mes)
