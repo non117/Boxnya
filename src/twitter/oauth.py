@@ -28,7 +28,7 @@ class OAuth():
         params.update(extra_params)
         return params
     
-    def base(self, url, method, extra_params={}):
+    def base(self, url, method, extra_params={}, extra_header={}, extra_data=None):
         params = self.init_params(extra_params)
         params["oauth_token"] = self.atoken
         params["oauth_signature"] = self.make_signature(params, url, method, self.atokensecret)
@@ -41,6 +41,9 @@ class OAuth():
             request.add_data("&".join(['%s=%s' % kv for kv in extra_params.items()]))
         oauth_header = "OAuth %s" % (", ".join(['%s="%s"' % (key, urllib.quote(val)) for key, val in params.items()]))
         request.add_header("Authorization", oauth_header)
+        for k,v in extra_header.items():
+            request.add_header(k, v)
+        if extra_data and extra_header: request.add_data(extra_data)
         return request
 
     def oauth_initializer(self, request_url, auth_url ,accesstoken_url):
