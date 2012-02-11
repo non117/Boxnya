@@ -116,7 +116,8 @@ class Filter(Output):
     
     def throw(self, packet):
         data = self.filter(packet)
-        self.send(data)
+        if data:
+            self.send(data)
 
 class Logger(BaseThread):
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None,

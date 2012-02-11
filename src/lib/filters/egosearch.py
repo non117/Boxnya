@@ -5,19 +5,27 @@ from lib.core import Filter
 
 class EgoSearch(Filter):
     def init(self):
+        try:
+            self.regexp = self.regexp.decode("utf-8")
+        except UnicodeDecodeError:
+            self.regexp = None
         self.pattern = re.compile(self.regexp)
+        if isinstance(self.screen_name, str):
+            self.screen_name = [self.screen_name]
         self.users = self.screen_name
         self.history = []
+        self.pattern
+        #TODO: enable処理
     
     def filter(self, packet):
         data = packet["data"]
         if not isinstance(data, dict):
-            return data
-        
-        if data.get("mentions") and [user for user in self.users if user in  data["mentions"]]:
+            return None
+
+        if data.get("mentions") and [user for user in self.users if user in [mention["screen_name"] for mention in data["mentions"]]]:
             mention = {"user":data["user"]["screen_name"],
                        "post":data["text"]}
-            return u"%(user)s: %s(post)" % mention
+            return u"%(user)s: %(post)s" % mention
         elif data.get("event") and data["target"]["screen_name"] in self.users:
             if "favorite" in data["event"]:
                 event = {"star":u"☆" if "un" in data["event"] else u"★",
@@ -41,7 +49,8 @@ class EgoSearch(Filter):
                 event = {"event":u"◆ Added into" if "add" in data["event"] else u"◇ Removed from",
                          "list":data["object"]["name"]}
                 return u"%(event) %(list)s" % event
-        elif self.pattern.search(data.get("text", "")):
+        elif self.regexp and self.pattern.search(data.get("text", "")):
             mention = {"user":data["user"]["screen_name"],
                        "post":data["text"]}
-            return u"%(user)s: %s(post)" % mention
+            return u"%(user)s: %(post)s" % mention
+        return None
