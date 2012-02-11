@@ -6,7 +6,7 @@ import mimetypes
 from lib.twitter.oauth import OAuth
 
 class Api():
-    def __init__(self,  atoken, atokensecret, ckey="iZqQjmzya6I6uDMzwbTsQ", 
+    def __init__(self,  atoken="", atokensecret="", ckey="iZqQjmzya6I6uDMzwbTsQ", 
                  csecret="CuzuwHUBbmbPuyYzIagCLSfSbXhiyNL7JAusmAexsY"):
         self.oauth = OAuth(ckey, csecret, atoken, atokensecret)
         self.jsonparser = JsonParser()

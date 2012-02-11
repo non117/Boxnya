@@ -2,18 +2,24 @@
 import atexit, os, signal, sys, time
 
 from lib.core import Master
+from lib.twitter.api import Api
+
 try:
     import settings
+    s = getattr(settings, "INPUT_SETTINGS").get("twitter")
+    for i in s:
+        if not i.get("atokensecret") or not i.get("atoken"):
+            twi = Api()
+            print twi.initializer()
 except ImportError:
     sys.exit("Error : Cannot import settings module.")
 
 class Daemon(object):
     def __init__(self):
         self.pidfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "boxnya.pid")
-        logdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log", "system.log")
         self.stdin = '/dev/null'
-        self.stdout = logdir
-        self.stderr = logdir
+        self.stdout = 'dev/null'
+        self.stderr = 'dev/null'
     def daemonize(self):
         try: 
             pid = os.fork() 

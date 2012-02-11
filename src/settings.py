@@ -2,7 +2,7 @@
 import os
 
 # System Settings
-DAEMON = True
+DAEMON = False
 LOGGING = True
 LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),"log")
 LOG_OUT = []
