@@ -1,3 +1,31 @@
-Boxnya
-Please read ./doc/readme.txt (in Japanese)
+if daemon true
+python boxnya.py start|stop|restar
 
+input->filter->output
+or
+input->output
+
+example
+input:twitter,gmail
+filter:egosearch
+output:imkayac
+
+INOUT = {"twitter":["egosearch"],
+         "egosearch":["imkayac"],
+         "gmail":["imkayac"]
+         }
+         
+settings
+key:module(input,output or filter) name
+value:args dictionary or list
+if list and list contains plural value, that module is cloned.
+
+example
+twitter has 2 settings.
+so, 2 twitter module run.
+you can use more than one account. 
+INPUT_SETTINGS = {
+                  "gmail":{"username":"", "password":""},
+                  "twitter":[{"atoken":"","atokensecret":""},
+                             {"atoken":"","atokensecret":""}],
+                  }

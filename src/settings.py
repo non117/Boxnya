@@ -2,14 +2,14 @@
 import os
 
 # System Settings
-DAEMON = False
+DAEMON = True
 LOGGING = True
 LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),"log")
 LOG_OUT = []
 LOG_MOD = []
 
 # Module Settings
-ENABLE_MODULES = ["twitter","egosearch","test2"]
+ENABLE_MODULES = []
 # In-Out
 # Input-to-Output matrix must be set like following dictionary.
 # "Input1", "Output1" is a name of these modules.
@@ -18,8 +18,9 @@ ENABLE_MODULES = ["twitter","egosearch","test2"]
 # ...
 # }
 # If Outputs list is [] or None, all Output modules are used.
-INOUT = {"twitter":["test2"],
-         "egosearch":["test2"]
+INOUT = {"twitter":["egosearch"],
+         "egosearch":["imkayac"],
+         "gmail":["imkayac"]
          }
 
 # Module Configure
@@ -30,9 +31,9 @@ INPUT_SETTINGS = {
                              {"atoken":"","atokensecret":""}],
                   }
 
-FILTER_SETTINGS = {"egosearch":{"screen_name":["",""],"regexp":"","enable":[]},}
+FILTER_SETTINGS = {"egosearch":{"screen_name":"","regexp":"","enable":[]},}
 
 # Output
-OUTPUT_SETTINGS = {"test2":{"a":1},
+OUTPUT_SETTINGS = {
                    "imkayac":{"username":"", "password":"", "sig": ""}
                    }
