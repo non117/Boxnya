@@ -11,7 +11,7 @@ class OAuth():
         self.atoken = atoken
         self.atokensecret = atokensecret
     
-    def make_signature(self, params, url, method, secret=""):    
+    def make_signature(self, params, url, method, secret=""):
         pstr = "&".join(["%s=%s" % kv for kv in sorted(params.items())])
         msg = "%s&%s&%s" % (method, urllib.quote(url, ""), urllib.quote(pstr, ""))
         h = hmac.new("%s&%s" % (self.csecret, secret), msg, hashlib.sha1)
@@ -34,16 +34,19 @@ class OAuth():
         params["oauth_signature"] = self.make_signature(params, url, method, self.atokensecret)
         for key in extra_params.keys():
             del params[key]
+        
         if method == "GET":
             url = "%s?%s" % (url, urllib.urlencode(extra_params))
         request = urllib2.Request(url)
+        
         if method == "POST":
             request.add_data("&".join(['%s=%s' % kv for kv in extra_params.items()]))
+        if extra_data and extra_header: request.add_data(extra_data)
+        
         oauth_header = "OAuth %s" % (", ".join(['%s="%s"' % (key, urllib.quote(val)) for key, val in params.items()]))
         request.add_header("Authorization", oauth_header)
         for k,v in extra_header.items():
             request.add_header(k, v)
-        if extra_data and extra_header: request.add_data(extra_data)
         return request
 
     def oauth_initializer(self, request_url, auth_url ,accesstoken_url):

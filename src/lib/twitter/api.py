@@ -3,7 +3,7 @@ import datetime
 import urllib, urllib2
 import json
 import mimetypes
-from twitter.oauth import OAuth
+from lib.twitter.oauth import OAuth
 
 class Api():
     def __init__(self,  atoken, atokensecret, ckey="iZqQjmzya6I6uDMzwbTsQ", 
@@ -22,6 +22,7 @@ class Api():
         for key, val in params.items():
             if isinstance(val, unicode): val = val.encode("utf-8")
             params[key] = urllib.quote(str(val), "")
+        
         request = self.oauth.base(url, method, params, extra_header, extra_data)
         try:
             response = urllib2.urlopen(request).read()
@@ -103,8 +104,9 @@ class JsonParser():
     
     def retweet(self, data):
         return {"event":"retweet",
-                "status":self.status(data["retweeted_status"]),
-                "user":self.user(data["user"]),
+                "source":self.user(data["user"]),
+                "target":self.status(data["retweeted_status"])["user"],
+                "object":self.status(data["retweeted_status"]),
                 "date":data["created_at"]
                 }
     
@@ -118,9 +120,7 @@ class JsonParser():
     
     def favorite(self, data):
         data = self.event(data)
-        st = self.status(data["object"])
-        del st["user"]
-        data["object"] = st
+        data["object"] = self.status(data["object"])
         return data
     
     def list(self, data):
@@ -137,15 +137,14 @@ class JsonParser():
     def dm(self, data):
         return {"event":"dm",
                 "id":data["direct_message"]["id"],
-                "sender":self.user(data["direct_message"]["sender"]),
-                "recipient":self.user(data["direct_message"]["recipient"]),
+                "source":self.user(data["direct_message"]["sender"]),
+                "target":self.user(data["direct_message"]["recipient"]),
                 "text":data["direct_message"]["text"],
                 "date":data["direct_message"]["created_at"]
                 }
     
     def delete(self, data):
-        return {"event":"delete",
-                "type":data["delete"].keys()[0],
+        return {"type":data["delete"].keys()[0],
                 "user_id":data["delete"].values()[0]["user_id"],
                 "id":data["delete"].values()[0]["id"],
                 "date":unicode(datetime.datetime.today().strftime("%a %b %d %H:%M:%S +0900 %Y"))
@@ -153,18 +152,21 @@ class JsonParser():
     
     def format(self, obj):
         if obj.get("event"):
-            if "favorite" in obj["event"]: return self.favorite(obj)
-            if "list" in obj["event"]: return self.list(obj)
-            if "follow" == obj["event"]: return self.follow(obj)
+            if "favorite" in obj["event"]:
+                return self.favorite(obj)
+            if "list" in obj["event"]:
+                return self.list(obj)
+            if "follow" == obj["event"]:
+                return self.follow(obj)
         elif obj.get("retweeted_status"):
             return self.retweet(obj)
         elif obj.get("direct_message"):
             return self.dm(obj)
         elif obj.get("delete"):
             return self.delete(obj)
+        
         try:
             data = self.status(obj)
-            data.update({"event":"status"})
             return data
         except KeyError:
             return obj

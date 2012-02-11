@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
+import os
 
 # System Settings
 DAEMON = False
 LOGGING = True
-LOG_DIR = ""
-LOG_OUT = ["test2"]
-LOG_MOD = ["test"]
+LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),"log")
+LOG_OUT = []
+LOG_MOD = []
 
 # Module Settings
+ENABLE_MODULES = ["twitter","egosearch","test2"]
 # In-Out
 # Input-to-Output matrix must be set like following dictionary.
 # "Input1", "Output1" is a name of these modules.
@@ -16,18 +18,19 @@ LOG_MOD = ["test"]
 # ...
 # }
 # If Outputs list is [] or None, all Output modules are used.
-INOUT = {"test":[],
-         "test4":[]
+INOUT = {"twitter":["test2"],
+         "egosearch":["test2"]
          }
 
 # Module Configure
 # Input
 INPUT_SETTINGS = {
-                  "test":{"token":1},
-                  "gmail":{"username":"", "password":""}
+                  "gmail":{"username":"", "password":""},
+                  "twitter":[{"atoken":"","atokensecret":""},
+                             {"atoken":"","atokensecret":""}],
                   }
 
-FILTER_SETTINGS = {}
+FILTER_SETTINGS = {"egosearch":{"screen_name":["",""],"regexp":"","enable":[]},}
 
 # Output
 OUTPUT_SETTINGS = {"test2":{"a":1},

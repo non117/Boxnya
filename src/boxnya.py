@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import atexit, os, signal, sys, time
 
-from core import Master
+from lib.core import Master
 try:
     import settings
 except ImportError:
