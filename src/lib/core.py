@@ -16,15 +16,18 @@ class Carrier(object):
         self.queue = Queue()
         self.event = Event()
     
-    def handover(self, data):
-        self.queue.put_nowait(data)
+    def handover(self, packet):
+        ''' データをキューに入れる. 配送先のイベントを起こす '''
+        self.queue.put_nowait(packet)
         self.event.set()
         self.event.clear()
     
     def pickup(self):
+        ''' 配達したデータを受け取ってもらう '''
         return self.queue.get_nowait()
     
     def wake(self):
+        ''' イベントを起こす '''
         self.event.set()
     
     def clear(self):
@@ -33,17 +36,19 @@ class Carrier(object):
     
     def empty(self):
         return self.queue.empty()
+    
     def sleep(self):
+        ''' イベントを眠らせる '''
         self.event.wait()
 
 class BaseThread(Thread):
-    ''' master, logger, input, outputの基底クラス
-        master, logger引数にはそれぞれのCarrierオブジェクトが渡される
+    ''' master, logger, input, output(filter)の基底クラス.
+        master, logger, inputのoutput_carriersに, 配送先のCarrierオブジェクトを格納して引数に渡す.
     '''
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None,
                   verbose=None, master=None, logger=None, output_carriers=[]):
         super(BaseThread, self).__init__(group, target, name, args, kwargs, verbose)
-        if isinstance(kwargs, dict):
+        if isinstance(kwargs, dict): # kwargsをselfにセット
             for k,v in kwargs.items():
                 if not k in ("name", "master", "logger", "output_carriers"):
                     setattr(self, k, v)
@@ -63,28 +68,31 @@ class BaseThread(Thread):
         ''' 終了時の処理をここに書く '''
         pass
     
-    def join(self, timeout=None, errmsg=""):
+    def join(self, timeout=None):
         self.cleanup()
         super(BaseThread, self).join(timeout)
     
     def call_master(self, data, type):
+        ''' masterにデータを投げる. typeはエラー, モジュールの停止要請など '''
         packet = {"data":data, "from":self.name, "type":type}
         self.master.carrier.handover(packet)
     
     def log(self, text, level='INFO'):
+        ''' 自分のモジュールに関するログを書く '''
         packet = {"text":text, "from":self.name, "level":level.upper()}
         self.logger.carrier.handover(packet)
     
     def send(self, data, target_names=[]):
-        ''' これでメッセージを投げる '''
+        ''' これでデータを投げる '''
         packet = {"data":data, "from":self.name}
         for name, carrier in self.output_carriers.items():
             if not target_names or name in target_names:# target_namesが空ならば常にTrue
                 carrier.handover(copy.deepcopy(packet))
 
 class Input(BaseThread):
+    ''' ネットやシステムログなどBoxnyaの外界から定期的にデータを取ってきて, filter, outputに渡すスレッド '''
     def fetch(self):
-        ''' このメソッドをオーバーライドする '''
+        ''' データを取ってくる処理をここに '''
         #self.send(data, target_names)
     
     def run(self):
@@ -95,8 +103,9 @@ class Input(BaseThread):
             self.call_master(sys.exc_info(), "error")
 
 class Output(BaseThread):
+    ''' inputから受け取ったデータをBoxnyaの外界に投げるスレッド '''
     def throw(self, packet):
-        ''' このメソッドをオーバーライドする '''
+        ''' 受け取ったデータの最終処理 '''
         pass
     
     def run(self):
@@ -110,6 +119,9 @@ class Output(BaseThread):
             self.call_master(sys.exc_info(), "error")
             
 class Filter(Output):
+    ''' 複数の入力をまとめてフィルター処理するのに使うスレッド.
+        inputからデータを受け取り, outputに渡す
+    '''
     def filter(self, packet):
         ''' フィルター処理をここに書く '''
         #return data
@@ -120,6 +132,7 @@ class Filter(Output):
             self.send(data)
 
 class Logger(BaseThread):
+    ''' ログを取るためのスレッド. Outputみたいな役割をもつ '''
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None,
                   verbose=None, master=None, settings=None):
         super(Logger, self).__init__(group, target, name, args, kwargs, verbose)
@@ -127,7 +140,9 @@ class Logger(BaseThread):
         self.logger = self
         self.log_dir = settings["log_dir"]
         self.loggers = {}
+        # システムログを作る
         self.loggers[self.master.name] = self._logger_fuctory(self.master.name)
+        # settings.LOG_MODにあるモジュールのロガーを作る
         for name in settings["log_mod"]:
             self.loggers[name] = self._logger_fuctory(name)
     
@@ -143,7 +158,7 @@ class Logger(BaseThread):
     def _write(self, packet):
         level = getattr(logging, packet["level"], logging.INFO)
         self.loggers[packet["from"]].log(level, packet["text"])
-        if level >= logging.ERROR:
+        if level >= logging.ERROR:# エラー以上のログならば, settings.LOG_OUTにログテキストを渡す
             self.send(packet["text"])
     
     def run(self):
@@ -157,9 +172,10 @@ class Logger(BaseThread):
             self.call_master(sys.exc_info(), "error")
 
 class Master(BaseThread):
+    ''' 全てのモジュールを管理するスレッド. モジュールのstart, stopなどはこのスレッドが行う. '''
     def __init__(self, settings, group=None, target=None, name=None, args=(), kwargs=None, verbose=None):
         super(Master, self).__init__(group, target, "system", args, kwargs, verbose)
-        self.active_number = 0
+        self.active_number = 0 # system,logger以外で生きてるスレッドの個数
         self._load_settings(settings)
         if self.logging: # ロガーの起動
             self.logger = Logger(master=self, settings=self.log_settings)
@@ -167,13 +183,15 @@ class Master(BaseThread):
         self.log("Boxnya system started.")
         
         self._load_modules()
-        self.output_instances, self.input_instances, self.filter_instances = {},{},{}
+        self.running_outputs, self.running_inputs, self.running_filters = {},{},{}
         self.filter_carriers, self.carrier_lists, self.output_carriers = {},{},{}
-        for name, module in self.output_modules.items(): #出力モジュールをインスタンス化
+        
+        for name, module in self.output_modules.items(): #outputモジュールをインスタンス化
             instance = module(name=name, kwargs=self.output_settings.get(name), master=self, logger=self.logger)
-            self.output_instances[name] = instance
+            self.running_outputs[name] = instance
             self.output_carriers[name] = instance.carrier
-        if self.logging:# ロガーのエラー出力先
+        
+        if self.logging:# ロガーのエラー出力先outputをセット
             log_outputs = getattr(settings ,"LOG_OUT")
             self.logger.output_carriers = dict([(name, carrier) for name, carrier in self.output_carriers.items() 
                                            if name.split(".")[0] in log_outputs])
@@ -185,7 +203,7 @@ class Master(BaseThread):
             self.carrier_lists[name] = outputs
             instance = module(name=name, kwargs=self.filter_settings.get(name),
                         master=self, logger=self.logger, output_carriers=outputs)
-            self.filter_instances[name] = instance
+            self.running_filters[name] = instance
             self.filter_carriers[name] = instance.carrier
         
         for name, module in self.input_modules.items(): #入力モジュールに出力先のメッセージを渡してインスタンス化
@@ -193,7 +211,7 @@ class Master(BaseThread):
                                if output_name.split(".")[0] in self.input_to_output.get(name.split(".")[0])]
             
             self.carrier_lists[name] = outputs
-            self.input_instances[name] = module(name=name, kwargs=self.input_settings.get(name),
+            self.running_inputs[name] = module(name=name, kwargs=self.input_settings.get(name),
                                                 master=self, logger=self.logger, output_carriers=outputs)
         
     def _make_module_dict(self, dirname):
@@ -217,6 +235,7 @@ class Master(BaseThread):
         self.logging = getattr(settings, "LOGGING", False)
         if self.logging:
             if not getattr(settings, "LOG_DIR", ""):
+                # ログディレクトリの設定がなければ, Boxnya/logを設定
                 logpath = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),"log")
             else:
                 logpath = settings.LOG_DIR
@@ -242,7 +261,8 @@ class Master(BaseThread):
             self.log("no INPUT or OUTPUT module.", "ERROR")
             self.log("Boxnya system terminate.")
             sys.exit("Error : no INPUT or OUTPUT module.")
-        for input, outputs in self.input_to_output.items(): # Outputsが空の場合の処理
+        for input, outputs in self.input_to_output.items(): 
+            # INOUTで, inputに対応するoutputが[]のときは, 読み込まれたoutput全てを設定
             if not outputs and input in self.input_modules:
                 self.input_to_output[input] = self.output_modules.keys() + self.filter_modules.keys()
             elif not outputs and input in self.filter_modules:
@@ -257,7 +277,7 @@ class Master(BaseThread):
         for name, confs in settings.items():
             if isinstance(confs, list):
                 for i,conf in enumerate(confs):
-                    if i==0:
+                    if i==0: #0番目のモジュールはそのまま
                         settings[name] = conf
                     else:
                         new_name = "%s.%d" % (name, i)
@@ -274,7 +294,7 @@ class Master(BaseThread):
                 modules[name] = module
     
     def run(self):
-        for instance in self.output_instances.values() + self.input_instances.values() + self.filter_instances.values():
+        for instance in self.running_outputs.values() + self.running_inputs.values() + self.running_filters.values():
             instance.start()
             self.active_number += 1
         self.log("Boxnya module run.")
@@ -288,6 +308,9 @@ class Master(BaseThread):
                     self._start_module(packet["data"])
                 elif packet["type"] == "stop":
                     self._stop_module(packet["data"])
+                elif packet["type"] == "log":
+                    if isinstance(packet["data"], str):
+                        self.log(packet["data"])
     
     def _error_handle(self, exception):
         log_text = "Exception has occured in %s : %s %s" %(exception["from"],
@@ -296,7 +319,7 @@ class Master(BaseThread):
         self._start_module(exception["from"])
     
     def join(self, timeout=None, errmsg=""):
-        for name in self.input_instances.keys() + self.filter_instances.keys() + self.output_instances.keys():
+        for name in self.running_inputs.keys() + self.running_filters.keys() + self.running_outputs.keys():
             self._stop_module(name)
         self.log("Boxnya module terminated.")
         self.log("Boxnya system terminate.")
@@ -312,7 +335,7 @@ class Master(BaseThread):
             instance = self.input_modules[name](name=name, kwargs=self.input_settings.get(name),
                                 master=self, logger=self.logger, output_carriers=self.carrier_lists[name])
             instance.start()
-            self.input_instances[name] = instance
+            self.running_inputs[name] = instance
             self.active_number += 1
         elif name in self.filter_modules:
             instance = self.filter_modules[name](name=name, kwargs=self.filter_settings.get(name),
@@ -320,7 +343,7 @@ class Master(BaseThread):
             instance.carrier = self.filter_carriers[name]
             instance.carrier.clear()
             instance.start()
-            self.filter_instances[name] = instance
+            self.running_filters[name] = instance
             self.active_number += 1
         elif name in self.output_modules:
             instance = self.output_modules[name](name=name, kwargs=self.output_settings.get(name),
@@ -328,30 +351,30 @@ class Master(BaseThread):
             instance.carrier = self.output_carriers[name]
             instance.carrier.clear()
             instance.start()
-            self.output_instances[name] = instance
+            self.running_outputs[name] = instance
             self.active_number += 1
     
     def _stop_module(self, name):
-        if name in self.input_instances:
-            instance = self.input_instances[name]
+        if name in self.running_inputs:
+            instance = self.running_inputs[name]
             instance.stopevent.set()
             instance.join(0.1)
             if not instance.is_alive():
-                self.input_instances.pop(name)
+                self.running_inputs.pop(name)
                 self.active_number -= 1
-        elif name in self.filter_instances:
-            instance = self.filter_instances[name]
+        elif name in self.running_filters:
+            instance = self.running_filters[name]
             instance.carrier.wake()
             instance.stopevent.set()
             instance.join(0.1)
             if not instance.is_alive():
-                self.filter_instances.pop(name)
+                self.running_filters.pop(name)
                 self.active_number -= 1
-        elif name in self.output_instances:
-            instance = self.output_instances[name]
+        elif name in self.running_outputs:
+            instance = self.running_outputs[name]
             instance.carrier.wake()
             instance.stopevent.set()
             instance.join(0.1)
             if not instance.is_alive():
-                self.output_instances.pop(name)
+                self.running_outputs.pop(name)
                 self.active_number -= 1
