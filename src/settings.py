@@ -9,7 +9,7 @@ LOG_OUT = []
 LOG_MOD = []
 
 # Module Settings
-ENABLE_MODULES = ["twitter","egosearch","imkayac"]
+ENABLE_MODULES = []
 # In-Out
 # Input-to-Output matrix must be set like following dictionary.
 # "Input1", "Output1" is a name of these modules.
@@ -19,20 +19,29 @@ ENABLE_MODULES = ["twitter","egosearch","imkayac"]
 # }
 # If Outputs list is [] or None, all Output modules are used.
 INOUT = {"twitter":["egosearch"],
-         "egosearch":["imkayac"],
-         "gmail":["imkayac"]
+         "egosearch":["favbot", "imkayac"],
+         "gmail":[]
          }
 
 # Module Configure
 # Input
 INPUT_SETTINGS = {
                   "gmail":{"username":"", "password":""},
-                  "twitter":{'atokensecret': '', 'atoken': ''},
+                  "twitter":[{'atokensecret': '', 'atoken': ''},
+                             {'atokensecret': '', 'atoken': ''}]
                   }
-
-FILTER_SETTINGS = {"egosearch":{"screen_name":"","regexp":"","enable":[]},}
+# Filter
+FILTER_SETTINGS = {
+                   "egosearch":{
+                                "screen_name":["",""],
+                                "regexp":"",
+                                "enable":[], 
+                                "protected":[""] #オプション
+                                },
+                   }
 
 # Output
 OUTPUT_SETTINGS = {
-                   "imkayac":{"username":"", "password":"", "sig": ""}
+                   "imkayac":{"username":"", "password":"", "sig": ""},
+                   "favbot":{"include":["twitter"]}
                    }

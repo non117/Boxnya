@@ -8,25 +8,24 @@ class EgoSearch(Filter):
         try:
             self.regexp = self.regexp.decode("utf-8")
         except UnicodeDecodeError:
-            self.regexp = None
+            self.regexp = ""
         self.pattern = re.compile(self.regexp)
         if isinstance(self.screen_name, str):
             self.screen_name = [self.screen_name]
-        self.users = self.screen_name
-        self.history = []
-        self.pattern
-        #TODO: enable処理
+        if isinstance(self.protected, str):
+            self.protected = [self.protected]
+            
     
     def filter(self, packet):
         data = packet["data"]
         if not isinstance(data, dict):
             return None
 
-        if data.get("mentions") and [user for user in self.users if user in [mention["screen_name"] for mention in data["mentions"]]]:
+        if data.get("mentions") and [user for user in self.screen_name if user in [mention["screen_name"] for mention in data["mentions"]]]:
             mention = {"user":data["user"]["screen_name"],
                        "post":data["text"]}
             return u"%(user)s: %(post)s" % mention
-        elif data.get("event") and data["target"]["screen_name"] in self.users:
+        elif data.get("event") and data["target"]["screen_name"] in self.screen_name:
             if "favorite" in data["event"]:
                 event = {"star":u"☆" if "un" in data["event"] else u"★",
                          "user":data["source"]["screen_name"],
@@ -49,6 +48,9 @@ class EgoSearch(Filter):
                 event = {"event":u"◆ Added into" if "add" in data["event"] else u"◇ Removed from",
                          "list":data["object"]["name"]}
                 return u"%(event) %(list)s" % event
+        elif data.get("event") == "favorite" and data["source"]["screen_name"] in self.protected:
+            self.send({"id":data["object"]["id"],"type":"protected"}, "favbot")
+            return None
         elif self.regexp and self.pattern.search(data.get("text", "")):
             mention = {"user":data["user"]["screen_name"],
                        "post":data["text"]}

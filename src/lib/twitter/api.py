@@ -34,6 +34,10 @@ class Api():
         url = self.site + "1/statuses/home_timeline.json"
         return self.exc(url,"GET")
 
+    def usertimeline(self, count=20):
+        url = self.site + "1/statuses/user_timeline.json"
+        return self.exc(url, "GET", {"count":count})
+
     def update(self, status):
         url = self.site + "1/statuses/update.json"
         return self.exc(url,"POST", {"status":status})
