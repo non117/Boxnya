@@ -179,7 +179,6 @@ class JsonParser():
         try:
             obj = json.loads(rawdata)
         except (KeyError, ValueError):
-            print rawdata
             return {}
         if isinstance(obj, dict):
             return self.format(obj)
