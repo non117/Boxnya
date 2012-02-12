@@ -47,7 +47,8 @@ except ImportError:
     sys.exit("Error : Cannot import settings module.")
 
 def setting_replacer(re_pattern, replace_list):
-    with open("settings.py","r+w") as f:
+    settings_dir = os.path.dirname(os.path.abspath(__file__)) + "settings.py"
+    with open(settings_dir,"r+w") as f:
         base_str = [part_s for part_s in re.split(re_pattern,f.read()) if part_s]
         setting_strs = []
         for i in range(len(base_str)+len(replace_list)):
