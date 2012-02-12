@@ -1,31 +1,11 @@
-if daemon true
-python boxnya.py start|stop|restar
+settings.pyに設定を書きます.
+DAEMON = Trueなら,
+$ python boxnya.py start|stop|restar
+で起動終了などが制御できます. boxnyaはデーモンプロセスとなります.
+※ 現在調整中. 使えません.
 
-input->filter->output
-or
-input->output
-
-example
-input:twitter,gmail
-filter:egosearch
-output:imkayac
-
-INOUT = {"twitter":["egosearch"],
-         "egosearch":["imkayac"],
-         "gmail":["imkayac"]
-         }
-         
-settings
-key:module(input,output or filter) name
-value:args dictionary or list
-if list and list contains plural value, that module is cloned.
-
-example
-twitter has 2 settings.
-so, 2 twitter module run.
-you can use more than one account. 
-INPUT_SETTINGS = {
-                  "gmail":{"username":"", "password":""},
-                  "twitter":[{"atoken":"","atokensecret":""},
-                             {"atoken":"","atokensecret":""}],
-                  }
+boxnyaは全ての入力, 出力がプラグイン方式で実現されています.
+src/lib/input,filter,outputにプラグインは格納されます.
+基本的には, 入力:Inputがネットやファイルシステムからデータを取ってきて, フィルター:Filterあるいは出力:Outputにわたします.
+Filterは, Inputから受け取ったデータをフィルタリングしてOutputにわたします.
+Outputは, InputあるいはFilterから受け取ったデータをネットやファイルシステムに出力するのが仕事です.

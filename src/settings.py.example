@@ -1,0 +1,52 @@
+# -*- coding: utf-8 -*-
+import os
+
+# 基本設定
+DAEMON = False
+LOGGING = True
+LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),"log")
+LOG_OUT = []
+LOG_MOD = []
+
+# 読み込むモジュール(プラグイン)の設定. []なら, Input,Filter,Outputにある全てが読み込まれます.
+ENABLE_MODULES = []
+# In-Out関係
+# In-Filter-Outputの関係を, INOUTに定義します.
+# INOUTは辞書で, Input(あるいはFilter)のモジュール名をキーに, Output(あるいはFilter)のモジュール名のリストを値にします.
+# 例えば, Input1から入力して, Filter1を通してOutput1へ出力したい場合には以下のようになります.
+# {"Input1":["Filter1"],
+#  "Filter1":["Output1"]
+# }
+# もし値のリストが[]ならば, 全てのFilterあるいはOutputが出力先となります.
+INOUT = {"twitter":["egosearch"],
+         "egosearch":["favbot", "imkayac"],
+         "gmail":[]
+         }
+
+# モジュール(プラグイン)の設定
+# 各Input, Filter, Outputの設定はそれぞれ辞書になっています.
+# 辞書のキーがモジュール名, 値がモジュールに設定する{"項目名":"設定値"}になります.
+# もし値の部分にリストが使われると, 中にある辞書の数だけモジュールがクローンされます.
+# つまり, 設定された値の違う複数の同一モジュールを動かせるということです.
+
+# Input
+INPUT_SETTINGS = {
+                  "gmail":{"username":"", "password":""},
+                  # twitterの設定は python boxnya.py init を実行すると自動的に行われます.
+                  "twitter":[{'atokensecret': '', 'atoken': ''},
+                             {'atokensecret': '', 'atoken': ''}]
+                  }
+# Filter
+FILTER_SETTINGS = {
+                   "egosearch":{
+                                "screen_name":["",""],
+                                "regexp":"",# エゴサーチ用の正規表現
+                                "protected":[""] #オプション
+                                },
+                   }
+
+# Output
+OUTPUT_SETTINGS = {
+                   "imkayac":{"username":"", "password":"", "sig": ""},
+                   "favbot":{"include":["twitter"]}
+                   }
