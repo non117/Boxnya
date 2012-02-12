@@ -27,8 +27,12 @@ INOUT = {"twitter":["egosearch"],
 # Input
 INPUT_SETTINGS = {
                   "gmail":{"username":"", "password":""},
+<<<<<<< HEAD
                   "twitter":[{"atoken":"","atokensecret":""},
                              {"atoken":"","atokensecret":""}],
+=======
+                  "twitter":{'atokensecret': '', 'atoken': ''},
+>>>>>>> e7159ee... 設定まわりを微調整. 動かなかったらごめんね☆（ゝω・）v
                   }
 
 FILTER_SETTINGS = {"egosearch":{"screen_name":"","regexp":"","enable":[]},}
