@@ -59,8 +59,8 @@ class OAuth():
         token = ret["oauth_token"][0]
         token_secret = ret["oauth_token_secret"][0]
         # Get PIN
-        print "---* Please access to following URL, and authorize Boxnya."
-        print "%s?%s=%s" % (auth_url, "oauth_token", token)
+        print "---* Please access to following URL, and authorize Boxnya.\n"
+        print "%s?%s=%s\n" % (auth_url, "oauth_token", token)
         print "---* Next, please input a 7 digit PIN that is given by twitter.com."
         print "->"
         pin = raw_input()
@@ -71,4 +71,4 @@ class OAuth():
         request = urllib2.Request("%s?%s" % (accesstoken_url, urllib.urlencode(params)))
         fin = urlparse.parse_qs(urllib2.urlopen(request).read())
         print "\n---> Authorized."
-        return {"access_token":fin["oauth_token"][0], "access_token_secret":fin["oauth_token_secret"][0]}
+        return {"atokensecret":fin["oauth_token_secret"][0], "atoken":fin["oauth_token"][0]}

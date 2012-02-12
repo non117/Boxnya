@@ -9,7 +9,7 @@ LOG_OUT = []
 LOG_MOD = []
 
 # Module Settings
-ENABLE_MODULES = []
+ENABLE_MODULES = ["twitter","egosearch","imkayac"]
 # In-Out
 # Input-to-Output matrix must be set like following dictionary.
 # "Input1", "Output1" is a name of these modules.
@@ -27,12 +27,7 @@ INOUT = {"twitter":["egosearch"],
 # Input
 INPUT_SETTINGS = {
                   "gmail":{"username":"", "password":""},
-<<<<<<< HEAD
-                  "twitter":[{"atoken":"","atokensecret":""},
-                             {"atoken":"","atokensecret":""}],
-=======
                   "twitter":{'atokensecret': '', 'atoken': ''},
->>>>>>> e7159ee... 設定まわりを微調整. 動かなかったらごめんね☆（ゝω・）v
                   }
 
 FILTER_SETTINGS = {"egosearch":{"screen_name":"","regexp":"","enable":[]},}

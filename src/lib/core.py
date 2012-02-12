@@ -138,12 +138,12 @@ class Logger(BaseThread):
         super(Logger, self).__init__(group, target, name, args, kwargs, verbose)
         self.master = master
         self.logger = self
-        self.log_dir = settings["log_dir"]
+        self.log_dir = settings["LOG_DIR"]
         self.loggers = {}
         # システムログを作る
         self.loggers[self.master.name] = self._logger_fuctory(self.master.name)
         # settings.LOG_MODにあるモジュールのロガーを作る
-        for name in settings["log_mod"]:
+        for name in settings["LOG_MOD"]:
             self.loggers[name] = self._logger_fuctory(name)
     
     def _logger_fuctory(self, name):
@@ -176,7 +176,8 @@ class Master(BaseThread):
     def __init__(self, settings, group=None, target=None, name=None, args=(), kwargs=None, verbose=None):
         super(Master, self).__init__(group, target, "system", args, kwargs, verbose)
         self.active_number = 0 # system,logger以外で生きてるスレッドの個数
-        self._load_settings(settings)
+        self._set_settings(settings)
+        
         if self.logging: # ロガーの起動
             self.logger = Logger(master=self, settings=self.log_settings)
             self.logger.start()
@@ -192,7 +193,7 @@ class Master(BaseThread):
             self.output_carriers[name] = instance.carrier
         
         if self.logging:# ロガーのエラー出力先outputをセット
-            log_outputs = getattr(settings ,"LOG_OUT")
+            log_outputs = self.log_settings["LOG_OUT"]
             self.logger.output_carriers = dict([(name, carrier) for name, carrier in self.output_carriers.items() 
                                            if name.split(".")[0] in log_outputs])
         
@@ -231,27 +232,14 @@ class Master(BaseThread):
                     pass
         return module_dict
     
-    def _load_settings(self, settings):
-        self.logging = getattr(settings, "LOGGING", False)
-        if self.logging:
-            if not getattr(settings, "LOG_DIR", ""):
-                # ログディレクトリの設定がなければ, Boxnya/logを設定
-                logpath = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),"log")
-            else:
-                logpath = settings.LOG_DIR
-            if not os.path.exists(logpath): #フォルダが存在しなければ作る
-                try:
-                    os.makedirs(logpath)
-                except os.error:
-                    sys.exit("Error : Cannot make log directory.")
-            self.log_settings = {"log_dir":logpath, "log_mod":getattr(settings, "LOG_MOD", [])}
-        if not getattr(settings, "INOUT", {}):
-            sys.exit("Error : No Input-to-Output matrix.")
-        self.enable_modules = getattr(settings, "ENABLE_MODULES", [])
-        self.input_to_output = settings.INOUT
-        self.input_settings = getattr(settings, "INPUT_SETTINGS", {})
-        self.output_settings = getattr(settings, "OUTPUT_SETTINGS", {})
-        self.filter_settings = getattr(settings, "FILTER_SETTINGS", {})
+    def _set_settings(self, settings):
+        self.logging = settings["LOGGING"]
+        self.log_settings = settings["LOG_SETTINGS"]
+        self.enable_modules = settings["ENABLE_MODULES"]
+        self.input_to_output = settings["INOUT"]
+        self.input_settings = settings["INPUT_SETTINGS"]
+        self.output_settings = settings["OUTPUT_SETTINGS"]
+        self.filter_settings = settings["FILTER_SETTINGS"]
         
     def _load_modules(self):
         self.input_modules = self._make_module_dict('lib.inputs')
