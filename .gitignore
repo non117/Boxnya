@@ -3,5 +3,6 @@
 .settings/*
 .DS_Store
 settings.py
+boxnya.pid
 *.pyc
 log/

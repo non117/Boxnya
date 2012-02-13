@@ -2,7 +2,6 @@ settings.pyに設定を書きます.
 DAEMON = Trueなら,
 $ python boxnya.py start|stop|restar
 で起動終了などが制御できます. boxnyaはデーモンプロセスとなります.
-※ 現在調整中. 使えません.
 
 boxnyaは全ての入力, 出力がプラグイン方式で実現されています.
 src/lib/input,filter,outputにプラグインは格納されます.

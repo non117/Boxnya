@@ -74,10 +74,12 @@ def twitterinitializer():
     
 class Daemon(object):
     def __init__(self):
+        global settings
+        log = settings["LOG_SETTINGS"]["LOG_DIR"] + "/system.log"
         self.pidfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "boxnya.pid")
         self.stdin = '/dev/null'
-        self.stdout = 'dev/null'
-        self.stderr = 'dev/null'
+        self.stdout = log
+        self.stderr = log
     def daemonize(self):
         try: 
             pid = os.fork() 
