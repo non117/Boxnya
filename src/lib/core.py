@@ -59,6 +59,7 @@ class BaseThread(Thread):
         self.carrier = Carrier(name)
         self.stopevent = Event()
         self.init()
+        self.output_names = set(self.output_carriers.keys())
     
     def init(self):
         ''' 初期処理をここに書く '''
@@ -82,20 +83,27 @@ class BaseThread(Thread):
         packet = {"text":text, "from":self.name, "level":level.upper()}
         self.logger.carrier.handover(packet)
     
-    def send(self, data, target_names=[]):
+    def send(self, data, target=[], exclude=[]):
         ''' これでデータを投げる '''
         packet = {"data":data, "from":self.name}
-        if target_names and isinstance(target_names, str):
-            target_names = [target_names]
-        for name, carrier in self.output_carriers.items():
-            if not target_names or name in target_names:# target_namesが空ならば常にTrue
-                carrier.handover(copy.deepcopy(packet))
+        if isinstance(target, str):
+            target = [target]
+        if isinstance(exclude, str):
+            exclude = [exclude]
+        if target:
+            output_names = self.output_names & set(target)
+        else:
+            output_names = self.output_names - set(exclude)
+
+        for name in output_names:
+            self.output_carriers[name].handover(copy.deepcopy(packet))
+
 
 class Input(BaseThread):
     ''' ネットやシステムログなどBoxnyaの外界から定期的にデータを取ってきて, filter, outputに渡すスレッド '''
     def fetch(self):
         ''' データを取ってくる処理をここに '''
-        #self.send(data, target_names)
+        #self.send(data, target, exclude)
     
     def run(self):
         try:
@@ -126,12 +134,10 @@ class Filter(Output):
     '''
     def filter(self, packet):
         ''' フィルター処理をここに書く '''
-        #return data
+        #self.send(data, target, exclude)
     
     def throw(self, packet):
-        data = self.filter(packet)
-        if data:
-            self.send(data)
+        self.filter(packet)
 
 class Logger(BaseThread):
     ''' ログを取るためのスレッド. Outputみたいな役割をもつ '''
@@ -240,9 +246,7 @@ class Master(BaseThread):
         self.log_settings = settings["LOG_SETTINGS"]
         self.enable_modules = settings["ENABLE_MODULES"]
         self.input_to_output = settings["INOUT"]
-        self.all_settings.update(settings["INPUT_SETTINGS"])
-        self.all_settings.update(settings["FILTER_SETTINGS"])
-        self.all_settings.update(settings["OUTPUT_SETTINGS"])
+        self.all_settings.update(settings["MODULE_SETTINGS"])
         for name, dic in self.all_settings.items():
             if "include" in dic:
                 for mod_name in dic["include"]:

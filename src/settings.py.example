@@ -2,7 +2,7 @@
 import os
 
 # 基本設定
-DAEMON = False
+DAEMON = False #今は使えません
 LOGGING = True
 LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),"log")
 LOG_OUT = []
@@ -24,29 +24,25 @@ INOUT = {"twitter":["egosearch"],
          }
 
 # モジュール(プラグイン)の設定
-# 各Input, Filter, Outputの設定はそれぞれ辞書になっています.
+# 各モジュールの設定は辞書になっています.
 # 辞書のキーがモジュール名, 値がモジュールに設定する{"項目名":"設定値"}になります.
 # もし値の部分にリストが使われると, 中にある辞書の数だけモジュールがクローンされます.
 # つまり, 設定された値の違う複数の同一モジュールを動かせるということです.
+# また, 基本的に複数設定する項目はリスト[]の中に文字列""を書いてください.
 
-# Input
-INPUT_SETTINGS = {
+MODULE_SETTINGS = {# Input
                   "gmail":{"username":"", "password":""},
                   # twitterの設定は python boxnya.py init を実行すると自動的に行われます.
                   "twitter":[{'atokensecret': '', 'atoken': ''},
-                             {'atokensecret': '', 'atoken': ''}]
-                  }
-# Filter
-FILTER_SETTINGS = {
+                             {'atokensecret': '', 'atoken': ''}],
+                   
+                    # Filter
                    "egosearch":{
                                 "screen_name":["",""],
                                 "regexp":"",# エゴサーチ用の正規表現
                                 "protected":[""] #オプション
                                 },
-                   }
-
-# Output
-OUTPUT_SETTINGS = {
+                    # Output
                    "imkayac":{"username":"", "password":"", "sig": ""},
-                   "favbot":{"include":["twitter"]}
+                   "favbot":{"include":["twitter"]} # "twitter"から設定をコピーしてきます.
                    }

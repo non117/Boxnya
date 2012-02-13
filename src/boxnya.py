@@ -35,9 +35,7 @@ def settings_loader(settings):
             "LOG_SETTINGS":log_settings,
             "ENABLE_MODULES":getattr(settings, "ENABLE_MODULES", []),
             "INOUT":settings.INOUT,
-            "INPUT_SETTINGS":getattr(settings, "INPUT_SETTINGS", {}),
-            "FILTER_SETTINGS":getattr(settings, "FILTER_SETTINGS", {}),
-            "OUTPUT_SETTINGS":getattr(settings, "OUTPUT_SETTINGS", {}),
+            "MODULE_SETTINGS":getattr(settings, "MODULE_SETTINGS", {}),
             }
 
 try:
@@ -47,7 +45,7 @@ except ImportError:
     sys.exit("Error : Cannot import settings module.")
 
 def setting_replacer(re_pattern, replace_list):
-    settings_dir = os.path.dirname(os.path.abspath(__file__)) + "settings.py"
+    settings_dir = os.path.dirname(os.path.abspath(__file__)) + "/settings.py"
     with open(settings_dir,"r+w") as f:
         base_str = [part_s for part_s in re.split(re_pattern,f.read()) if part_s]
         setting_strs = []
@@ -61,7 +59,7 @@ def setting_replacer(re_pattern, replace_list):
 
 def twitterinitializer():
     global settings
-    twitter_setting = settings.get("INPUT_SETTINGS").get("twitter",[])
+    twitter_setting = settings.get("MODULE_SETTINGS").get("twitter",[])
     if isinstance(twitter_setting, dict):
         twitter_setting = [twitter_setting]
     tokens = []
@@ -166,7 +164,7 @@ def main():
     global settings
     # ENABLE_MODULESが空なら全てのモジュールが有効なので, twitterは読み込まれる筈
     if not settings["ENABLE_MODULES"] or "twitter" in settings["ENABLE_MODULES"]:
-        twitter_setting = settings["INPUT_SETTINGS"].get("twitter",{})
+        twitter_setting = settings["MODULE_SETTINGS"].get("twitter",{})
         if isinstance(twitter_setting,dict):
             twitter_setting = [twitter_setting]
         if not (twitter_setting[0].get("atokensecret") and twitter_setting[0].get("atoken")):
