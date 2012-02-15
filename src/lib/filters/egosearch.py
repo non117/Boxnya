@@ -46,7 +46,7 @@ class EgoSearch(Filter):
                          "user":data["source"]["screen_name"],
                          "event":data["event"].title(),
                          "post":data["object"]["text"]}
-                self.send(u"%(star)s %(user)s %(event)sd: %(post)s*" % event, exclude = ["favbot"])
+                self.send(u"%(star)s %(user)s %(event)sd: %(post)s" % event, exclude = ["favbot"])
             
             elif "retweet" == data["event"]:
                 event = {"user":data["source"]["screen_name"],
