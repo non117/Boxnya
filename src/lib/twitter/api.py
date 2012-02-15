@@ -10,7 +10,7 @@ class Api():
                  csecret="CuzuwHUBbmbPuyYzIagCLSfSbXhiyNL7JAusmAexsY"):
         self.oauth = OAuth(ckey, csecret, atoken, atokensecret)
         self.jsonparser = JsonParser()
-        self.site = "https://api.twitter.com/"
+        self.site = "http://api.twitter.com/"
     
     def initializer(self):
         request_url = "http://twitter.com/oauth/request_token"

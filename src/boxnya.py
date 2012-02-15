@@ -2,7 +2,6 @@
 import atexit
 import os, sys, signal
 import time
-import re
 
 from lib.core import Master
 from lib.twitter.api import Api
@@ -44,33 +43,22 @@ try:
 except ImportError:
     sys.exit("Error : Cannot import settings module.")
 
-def setting_replacer(re_pattern, replace_list):
-    settings_dir = os.path.dirname(os.path.abspath(__file__)) + "/settings.py"
-    with open(settings_dir,"r+w") as f:
-        base_str = [part_s for part_s in re.split(re_pattern,f.read()) if part_s]
-        setting_strs = []
-        for i in range(len(base_str)+len(replace_list)):
-            if i%2==0:
-                setting_strs.append(base_str[i/2])
-            else:
-                setting_strs.append(str(replace_list[(i-1)/2]))
-        f.seek(0)
-        f.writelines(setting_strs)
-
 def twitterinitializer():
     global settings
     twitter_setting = settings.get("MODULE_SETTINGS").get("twitter",[])
     if isinstance(twitter_setting, dict):
         twitter_setting = [twitter_setting]
-    tokens = []
+    tokens = ['\n[']
     api = Api()
     for i in range(len(twitter_setting)):
         print "\n\n---> Authorize %dth account." % i
-        tokens.append(api.initializer())
-    re_pattern = r'''{\s?["']atokensecret["']\s?:\s?["']([a-zA-Z0-9]+)?["']\s?,\s?["']atoken["']\s?:\s?["']([a-zA-Z0-9-]+)?["']\s?}'''
-    setting_replacer(re_pattern, tokens)
-    reload(settings__)
-    settings = settings_loader(settings__)
+        tokens.append("\n%s," % str(api.initializer()))
+    tokens.append('],')
+    with open(os.path.dirname(os.path.abspath(__file__)) + "/settings.py", "a") as f:
+        f.writelines(tokens)
+    
+    print tokens
+    sys.exit()
     
 class Daemon(object):
     def __init__(self):
@@ -167,10 +155,8 @@ def main():
     # ENABLE_MODULESが空なら全てのモジュールが有効なので, twitterは読み込まれる筈
     if not settings["ENABLE_MODULES"] or "twitter" in settings["ENABLE_MODULES"]:
         twitter_setting = settings["MODULE_SETTINGS"].get("twitter",{})
-        if isinstance(twitter_setting,dict):
+        if isinstance(twitter_setting, dict):
             twitter_setting = [twitter_setting]
-        if not (twitter_setting[0].get("atokensecret") and twitter_setting[0].get("atoken")):
-            twitterinitializer()
     
     master = Master(settings)
     master.start()
