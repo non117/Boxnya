@@ -9,12 +9,22 @@ class EgoSearch(Filter):
             self.regexp = self.regexp.decode("utf-8")
         except UnicodeDecodeError:
             self.regexp = ""
+        self.history = []
         self.pattern = re.compile(self.regexp)
         if isinstance(self.screen_name, str):
             self.screen_name = [self.screen_name]
-        if isinstance(self.protected, str):
-            self.protected = [self.protected]
-            
+        self.favsync_sources = getattr(self, "favsync_sources", [])
+        if isinstance(self.favsync_sources, str):
+            self.favsync_sources = [self.favsync_sources]
+        self.favtero = getattr(self, "favtero", False)
+    
+    def sendable(self, message):
+        if message in self.history:
+            return False
+        self.history.append(message)
+        if len(self.history) > 20:
+            self.history.pop(0)
+        return True
     
     def filter(self, packet):
         data = packet["data"]
@@ -24,7 +34,11 @@ class EgoSearch(Filter):
         if data.get("mentions") and [user for user in self.screen_name if user in [mention["screen_name"] for mention in data["mentions"]]]:
             mention = {"user":data["user"]["screen_name"],
                        "post":data["text"]}
-            self.send(u"%(user)s: %(post)s" % mention, exclude = ["favbot"])
+            if self.sendable(mention):
+                self.send(u"%(user)s: %(post)s" % mention, exclude = ["favbot"])
+                
+                if self.favtero and "fav" in mention["post"] and mention["user"] in self.screen_name:
+                    self.send({"text":mention["post"], "mention":data["mentions"], "type":"favtero"}, target=["favbot"])
         
         elif data.get("event") and data["target"]["screen_name"] in self.screen_name:
             if "favorite" in data["event"]:
@@ -52,12 +66,13 @@ class EgoSearch(Filter):
             elif "list" in data["event"]:
                 event = {"event":u"◆ Added into" if "add" in data["event"] else u"◇ Removed from",
                          "list":data["object"]["name"]}
-                self.send(u"%(event) %(list)s" % event, exclude = ["favbot"])
+                self.send(u"%(event)s %(list)s" % event, exclude = ["favbot"])
         
         elif self.regexp and self.pattern.search(data.get("text", "")):
             mention = {"user":data["user"]["screen_name"],
                        "post":data["text"]}
-            self.send(u"%(user)s: %(post)s" % mention, exclude = ["favbot"])
+            if self.sendable(mention):
+                self.send(u"%(user)s: %(post)s" % mention, exclude = ["favbot"])
         
-        elif data.get("event") == "favorite" and data["source"]["screen_name"] in self.protected:
-            self.send({"id":data["object"]["id"],"type":"protected"}, target = ["favbot"])
+        elif data.get("event") == "favorite" and data["source"]["screen_name"] in self.favsync_sources:
+            self.send({"id":data["object"]["id"],"type":"favsync"}, target = ["favbot"])

@@ -40,9 +40,13 @@ MODULE_SETTINGS = {# Input
                    "egosearch":{
                                 "screen_name":["",""],
                                 "regexp":"",# エゴサーチ用の正規表現
-                                "protected":[""] #オプション
+                                "favsync_sources":[""], #オプション favbotと組み合わせて, fav同期を行います.
+                                "favtero":True
                                 },
                     # Output
                    "imkayac":{"username":"", "password":"", "sig": ""},
-                   "favbot":{"include":["twitter"]} # "twitter"から設定をコピーしてきます.
+                   "favbot":{
+                             "include":["twitter"], # "twitter"から設定をコピーしてきます.
+                             "favsync_targets":[""]
+                            },
                    }

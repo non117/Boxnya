@@ -94,7 +94,7 @@ class BaseThread(Thread):
             output_names = self.output_names & set(target)
         else:
             output_names = self.output_names - set(exclude)
-
+        
         for name in output_names:
             self.output_carriers[name].handover(copy.deepcopy(packet))
 
@@ -143,7 +143,7 @@ class Logger(BaseThread):
     ''' ログを取るためのスレッド. Outputみたいな役割をもつ '''
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None,
                   verbose=None, master=None, settings=None):
-        super(Logger, self).__init__(group, target, name, args, kwargs, verbose)
+        super(Logger, self).__init__(group, target, "logger", args, kwargs, verbose)
         self.master = master
         self.logger = self
         self.log_dir = settings["LOG_DIR"]
@@ -183,9 +183,9 @@ class Master(BaseThread):
     ''' 全てのモジュールを管理するスレッド. モジュールのstart, stopなどはこのスレッドが行う. '''
     def __init__(self, settings, group=None, target=None, name=None, args=(), kwargs=None, verbose=None):
         super(Master, self).__init__(group, target, "system", args, kwargs, verbose)
-        self.all_modules = {}
-        self.all_settings = {}
-        self.all_carriers = {}
+        self.modules = {}
+        self.settings = {}
+        self.output_carriers = {}
         self.carrier_lists = {}
         
         self._set_settings(settings)
@@ -196,33 +196,34 @@ class Master(BaseThread):
         self._load_modules()
         
         for name, module in self.output_modules.items(): #outputモジュールをインスタンス化
-            instance = module(name=name, kwargs=self.all_settings.get(name), master=self, logger=self.logger)
-            self.all_modules[name] = instance
-            self.all_carriers[name] = instance.carrier
+            instance = module(name=name, kwargs=self.settings.get(name), master=self, logger=self.logger)
+            self.modules[name] = instance
+            self.output_carriers[name] = instance.carrier
         
         if self.logging:# ロガーのエラー出力先outputをセット
             log_outputs = self.log_settings["LOG_OUT"]
-            self.logger.output_carriers = dict([(name, carrier) for name, carrier in self.all_carriers.items() 
+            self.logger.output_carriers = dict([(name, carrier) for name, carrier in self.output_carriers.items() 
                                            if name.split(".")[0] in log_outputs])
+            self.logger.output_names = set(log_outputs)
         
         for name, module in self.filter_modules.items(): #フィルターに出力先を渡してインスタンス化
-            outputs = [carrier for output_name, carrier in self.all_carriers.items()
+            outputs = [carrier for output_name, carrier in self.output_carriers.items()
                                if output_name.split(".")[0] in self.input_to_output.get(name.split(".")[0])]
             
             self.carrier_lists[name] = outputs
-            instance = module(name=name, kwargs=self.all_settings.get(name),
+            instance = module(name=name, kwargs=self.settings.get(name),
                         master=self, logger=self.logger, output_carriers=outputs)
-            self.all_modules[name] = instance
-            self.all_carriers[name] = instance.carrier
+            self.modules[name] = instance
+            self.output_carriers[name] = instance.carrier
         
         for name, module in self.input_modules.items(): #入力モジュールに出力先のメッセージを渡してインスタンス化
-            outputs = [carrier for output_name, carrier in self.all_carriers.items()
+            outputs = [carrier for output_name, carrier in self.output_carriers.items()
                                if output_name.split(".")[0] in self.input_to_output.get(name.split(".")[0])]
             
             self.carrier_lists[name] = outputs
-            instance = module(name=name, kwargs=self.all_settings.get(name),
+            instance = module(name=name, kwargs=self.settings.get(name),
                                                 master=self, logger=self.logger, output_carriers=outputs)
-            self.all_modules[name] = instance
+            self.modules[name] = instance
 
     def _make_module_dict(self, dirname):
         ''' ディレクトリ名を引数にとって, ディレクトリ内のモジュール名と同名のクラスを全て読み込む. '''
@@ -246,11 +247,11 @@ class Master(BaseThread):
         self.log_settings = settings["LOG_SETTINGS"]
         self.enable_modules = settings["ENABLE_MODULES"]
         self.input_to_output = settings["INOUT"]
-        self.all_settings.update(settings["MODULE_SETTINGS"])
-        for name, dic in self.all_settings.items():
+        self.settings.update(settings["MODULE_SETTINGS"])
+        for name, dic in self.settings.items():
             if "include" in dic:
                 for mod_name in dic["include"]:
-                    self.all_settings[name][mod_name] = self.all_settings[mod_name]
+                    self.settings[name][mod_name] = self.settings[mod_name]
     
     def _load_modules(self):
         self.input_modules = self._make_module_dict('lib.inputs')
@@ -266,7 +267,7 @@ class Master(BaseThread):
                 self.input_to_output[input] = self.output_modules.keys() + self.filter_modules.keys()
             elif not outputs and input in self.filter_modules:
                 self.input_to_output[input] = self.output_modules.keys()
-            self._clone_modules(self.all_settings)
+            self._clone_modules(self.settings)
     
     def _clone_modules(self, settings):
         ''' settingsにモジュールを多重化するように書いてあれば, そのモジュールをforkしておく. '''
@@ -290,7 +291,7 @@ class Master(BaseThread):
                 modules[name] = module
     
     def run(self):
-        for instance in self.all_modules.values():
+        for instance in self.modules.values():
             instance.start()
         self.log("Boxnya module run.")
 
@@ -315,7 +316,7 @@ class Master(BaseThread):
         self._start_module(exception["from"])
     
     def join(self, timeout=None, errmsg=""):
-        for name in self.all_modules.values():
+        for name in self.modules.values():
             self._stop_module(name)
         self.log("Boxnya module terminated.")
         self.log("Boxnya system terminate.")
@@ -328,30 +329,30 @@ class Master(BaseThread):
     
     def _start_module(self, name):
         if name in self.input_modules:
-            instance = self.input_modules[name](name=name, kwargs=self.all_settings.get(name),
+            instance = self.input_modules[name](name=name, kwargs=self.settings.get(name),
                                 master=self, logger=self.logger, output_carriers=self.carrier_lists[name])
             instance.start()
-            self.all_modules[name] = instance
+            self.modules[name] = instance
         elif name in self.filter_modules:
-            instance = self.filter_modules[name](name=name, kwargs=self.all_settings.get(name),
+            instance = self.filter_modules[name](name=name, kwargs=self.settings.get(name),
                                 master=self, logger=self.logger, output_carriers=self.carrier_lists[name])
-            instance.carrier = self.all_carriers[name]
+            instance.carrier = self.output_carriers[name]
             instance.carrier.clear()
             instance.start()
-            self.all_modules[name] = instance
+            self.modules[name] = instance
         elif name in self.output_modules:
-            instance = self.output_modules[name](name=name, kwargs=self.all_settings.get(name),
+            instance = self.output_modules[name](name=name, kwargs=self.settings.get(name),
                                             master=self, logger=self.logger)
-            instance.carrier = self.all_carriers[name]
+            instance.carrier = self.output_carriers[name]
             instance.carrier.clear()
             instance.start()
-            self.all_modules[name] = instance
+            self.modules[name] = instance
     
     def _stop_module(self, name):
-        if name in self.all_modules:
-            instance = self.all_modules[name]
+        if name in self.modules:
+            instance = self.modules[name]
             instance.carrier.wake()
             instance.stopevent.set()
             instance.join(1)
             if not instance.is_alive():
-                self.all_modules.pop(name)
+                self.modules.pop(name)
