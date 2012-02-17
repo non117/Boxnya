@@ -58,6 +58,7 @@ class BaseThread(Thread):
         self.output_carriers = dict([(o.name, o) for o in output_carriers])
         self.carrier = Carrier(name)
         self.stopevent = Event()
+        self.history = []
         self.init()
         self.output_names = set(self.output_carriers.keys())
     
@@ -97,7 +98,14 @@ class BaseThread(Thread):
         
         for name in output_names:
             self.output_carriers[name].handover(copy.deepcopy(packet))
-
+    
+    def sendable(self, message):
+        if message in self.history:
+            return False
+        self.history.append(message)
+        if len(self.history) > 20:
+            self.history.pop(0)
+        return True
 
 class Input(BaseThread):
     ''' ネットやシステムログなどBoxnyaの外界から定期的にデータを取ってきて, filter, outputに渡すスレッド '''

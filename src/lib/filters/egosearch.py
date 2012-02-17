@@ -9,22 +9,14 @@ class EgoSearch(Filter):
             self.regexp = self.regexp.decode("utf-8")
         except UnicodeDecodeError:
             self.regexp = ""
-        self.history = []
         self.pattern = re.compile(self.regexp)
+        # Options Initialize
         if isinstance(self.screen_name, str):
             self.screen_name = [self.screen_name]
         self.favsync_sources = getattr(self, "favsync_sources", [])
         if isinstance(self.favsync_sources, str):
             self.favsync_sources = [self.favsync_sources]
         self.favtero = getattr(self, "favtero", False)
-    
-    def sendable(self, message):
-        if message in self.history:
-            return False
-        self.history.append(message)
-        if len(self.history) > 20:
-            self.history.pop(0)
-        return True
     
     def filter(self, packet):
         data = packet["data"]

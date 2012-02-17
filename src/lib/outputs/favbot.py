@@ -29,7 +29,7 @@ class FavBot(Output):
         elif packet["data"].get("type") == "favtero":
             name = packet["data"]["mention"][0]["screen_name"]
             target_name = packet["data"]["text"].split(" ")[2]
-            count = int(packet["data"]["text"].split(" ")[-1])
+            count = int(packet["data"]["text"].split(" ")[3])
             roop = count/201 + 1
             ids = []
             for i in range(roop):

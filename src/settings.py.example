@@ -18,9 +18,10 @@ ENABLE_MODULES = []
 #  "Filter1":["Output1"]
 # }
 # もし値のリストが[]ならば, 全てのFilterあるいはOutputが出力先となります.
-INOUT = {"twitter":["egosearch"],
+INOUT = {
+         "twitter":["egosearch"],
          "egosearch":["favbot", "imkayac"],
-         "gmail":[]
+         "gmail":[],
          }
 
 # モジュール(プラグイン)の設定
@@ -32,21 +33,27 @@ INOUT = {"twitter":["egosearch"],
 
 MODULE_SETTINGS = {# Input
                   "gmail":{"username":"", "password":""},
-                  # twitterの設定は python boxnya.py init を実行すると自動的に行われます.
-                  "twitter":[{'atokensecret': '', 'atoken': ''},
-                             {'atokensecret': '', 'atoken': ''}],
+                  # twitterの設定は python boxnya.py init を実行するとこのファイルに設定が書き込まれるのでそれをコピペしてください.
+                  "twitter":[
+                             {'atokensecret': '', 'atoken': ''},
+                             {'atokensecret': '', 'atoken': ''}
+                             ],
                    
                     # Filter
                    "egosearch":{
-                                "screen_name":["",""],
+                                "screen_name":["",""],#twitterで設定したアカウントのスクリーンネーム
                                 "regexp":"",# エゴサーチ用の正規表現
-                                "favsync_sources":[""], #オプション favbotと組み合わせて, fav同期を行います.
-                                "favtero":True
+                                "favsync_sources":[""], #オプション favbotと組み合わせて, fav同期されるアカウントを指定します.
+                                "favtero":True, #オプション favtero機能が使えるようになります
                                 },
                     # Output
-                   "imkayac":{"username":"", "password":"", "sig": ""},
+                   "imkayac":{
+                              "username":"",
+                              "password":"", # オプション
+                              "sig": "" #オプション
+                              },
                    "favbot":{
                              "include":["twitter"], # "twitter"から設定をコピーしてきます.
-                             "favsync_targets":[""]
+                             "favsync_targets":[""], # オプションfav同期の対象を指定します.
                             },
                    }

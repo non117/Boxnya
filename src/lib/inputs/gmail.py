@@ -10,14 +10,14 @@ from lib.core import Input
 class Gmail(Input):
     def init(self):
         self.prev_count = sys.maxint
+        self.gmail = imaplib.IMAP4_SSL("imap.gmail.com", 993)
+        self.gmail.login(self.username, self.password)
     
     def cleanup(self):
         self.gmail.logout()
     
     def fetch(self):
-        self.gmail = imaplib.IMAP4_SSL("imap.gmail.com", 993)
         time.sleep(60)
-        self.gmail.login(self.username, self.password)
         _, n =  self.gmail.select()
         delta = int(n[0]) - self.prev_count #前回より増えた件数
         self.prev_count = int(n[0]) #更新しておく
@@ -33,4 +33,3 @@ class Gmail(Input):
             
             message = "mail from %s : %s" % (from_, subject)
             self.send(message)
-            self.gmail.logout()

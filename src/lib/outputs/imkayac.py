@@ -5,8 +5,6 @@ import urllib, urllib2
 from lib.core import Output
 
 class imkayac(Output):
-    def init(self):
-        self.history = []
     def throw(self, packet):
         message = packet["data"]
         url = "http://im.kayac.com/api/post/%s" % self.username
@@ -14,14 +12,11 @@ class imkayac(Output):
             message = message.encode("utf-8")
         else:
             message = str(message)
+        
         # 連続送信チェック
-        if message in self.history:
+        if not self.sendable(message):
             return None
-
-        self.history.append(message)
-        if len(self.history) > 10:
-            self.history.pop(0)
-
+        
         params = {"message":message}
         if self.password:
             params["password"] = self.password
