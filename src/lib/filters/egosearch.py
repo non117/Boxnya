@@ -10,13 +10,24 @@ class EgoSearch(Filter):
         except UnicodeDecodeError:
             self.regexp = ""
         self.pattern = re.compile(self.regexp)
-        # Options Initialize
+        
         if isinstance(self.screen_name, str):
             self.screen_name = [self.screen_name]
+        
+        # オプション設定の読み込み
         self.favsync_sources = getattr(self, "favsync_sources", [])
         if isinstance(self.favsync_sources, str):
             self.favsync_sources = [self.favsync_sources]
         self.favtero = getattr(self, "favtero", False)
+        self.filterRT = getattr(self, "filterRT", False)
+    
+    def isUnofficialRT(self, text):
+        if not self.filterRT:
+            return False
+        regexp = r".*[RQ]T:?\s?@?[a-zA-Z0-9_].*"
+        # searchがヒットしなければNoneが帰る
+        result = re.search(regexp, text)
+        return result
     
     def filter(self, packet):
         data = packet["data"]
@@ -26,7 +37,7 @@ class EgoSearch(Filter):
         if data.get("mentions") and [user for user in self.screen_name if user in [mention["screen_name"] for mention in data["mentions"]]]:
             mention = {"user":data["user"]["screen_name"],
                        "post":data["text"]}
-            if self.sendable(mention):
+            if self.sendable(mention) and not self.isUnofficialRT(mention["post"]):
                 self.send(u"%(user)s: %(post)s" % mention, exclude = ["favbot"])
                 
                 if self.favtero and "fav" in mention["post"] and mention["user"] in self.screen_name:

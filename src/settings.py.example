@@ -45,6 +45,7 @@ MODULE_SETTINGS = {# Input
                                 "regexp":"",# エゴサーチ用の正規表現
                                 "favsync_sources":[""], #オプション favbotと組み合わせて, fav同期されるアカウントを指定します.
                                 "favtero":True, #オプション favtero機能が使えるようになります
+                                "filterRT":True, #オプション 非公式RTを通知しないようにします
                                 },
                     # Output
                    "imkayac":{

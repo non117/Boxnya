@@ -43,22 +43,26 @@ try:
 except ImportError:
     sys.exit("Error : Cannot import settings module.")
 
-def twitterinitializer():
-    global settings
-    twitter_setting = settings.get("MODULE_SETTINGS").get("twitter",[])
-    if isinstance(twitter_setting, dict):
-        twitter_setting = [twitter_setting]
-    tokens = ['\n[']
+def twitterinitializer(account_number=0):
+    if not account_number:
+        global settings
+        # settings - twitter内の辞書の数を数える
+        twitter_setting = settings.get("MODULE_SETTINGS").get("twitter",[])
+        if isinstance(twitter_setting, dict):
+            twitter_setting = [twitter_setting]
+        account_number = len(twitter_setting)
+    
+    tokens = ['\n"twitter":[']
     api = Api()
-    for i in range(len(twitter_setting)):
+    for i in range(account_number):
         print "\n\n---> Authorize %dth account." % i
         tokens.append("\n%s," % str(api.initializer()))
     tokens.append('],')
+    
     with open(os.path.dirname(os.path.abspath(__file__)) + "/settings.py", "a") as f:
         f.writelines(tokens)
     
     print tokens
-    sys.exit()
     
 class Daemon(object):
     def __init__(self):
@@ -164,8 +168,10 @@ def main():
     master.join()
 
 if __name__ == "__main__":
-    if len(sys.argv) == 2 and 'init' == sys.argv[1]:
-        twitterinitializer()
+    if 2 <= len(sys.argv) <= 3 and 'init' == sys.argv[1]:
+        account_number = sys.argv[2] if sys.argv[2:] else 0
+        twitterinitializer(account_number)
+        sys.exit(0)
     if settings["DAEMON"]:
         if len(sys.argv) == 2:
             daemon = Daemon()
