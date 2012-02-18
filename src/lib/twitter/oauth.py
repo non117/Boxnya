@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-import time, random
+import hashlib
+import hmac
+import random
+import time
 import urllib, urllib2
-import hmac, hashlib
 import urlparse
 
 class OAuth():
@@ -12,6 +14,7 @@ class OAuth():
         self.atokensecret = atokensecret
     
     def make_signature(self, params, url, method, secret=""):
+        ''' シグネチャを計算する '''
         pstr = "&".join(["%s=%s" % kv for kv in sorted(params.items())])
         msg = "%s&%s&%s" % (method, urllib.quote(url, ""), urllib.quote(pstr, ""))
         h = hmac.new("%s&%s" % (self.csecret, secret), msg, hashlib.sha1)
@@ -29,6 +32,7 @@ class OAuth():
         return params
     
     def base(self, url, method, extra_params={}, extra_header={}, extra_data=None):
+        ''' OAuthのリクエストを作る '''
         params = self.init_params(extra_params)
         params["oauth_token"] = self.atoken
         params["oauth_signature"] = self.make_signature(params, url, method, self.atokensecret)
@@ -41,7 +45,8 @@ class OAuth():
         
         if method == "POST":
             request.add_data("&".join(['%s=%s' % kv for kv in extra_params.items()]))
-        if extra_data and extra_header: request.add_data(extra_data)
+        if extra_data and extra_header:
+            request.add_data(extra_data)
         
         oauth_header = "OAuth %s" % (", ".join(['%s="%s"' % (key, urllib.quote(val)) for key, val in params.items()]))
         request.add_header("Authorization", oauth_header)

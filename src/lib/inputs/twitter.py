@@ -7,6 +7,6 @@ class Twitter(Input):
         self.api = Api(self.atoken, self.atokensecret)
     
     def fetch(self):
-        def hoge(data):
+        def handler(data):
             self.send(data)
-        self.api.userstream(hoge)
+        self.api.userstream(handler)

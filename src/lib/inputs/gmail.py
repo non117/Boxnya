@@ -28,7 +28,7 @@ class Gmail(Input):
             p.feed(msg[0][1])
             header = p.close()
             from_ = header.get("from").split(" ")[0]
-            subject = decode_header(header.get("subject"))
+            subject = decode_header(header.get("subject")) #TODO: 文字化け修正
             subject = subject[0][0].decode(subject[0][1]) if subject[0][1] else subject[0][0]
             
             message = "mail from %s : %s" % (from_, subject)

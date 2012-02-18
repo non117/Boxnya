@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import atexit
-import os, sys, signal
+import os
+import sys
+import signal
 import time
 
 from lib.core import Master
@@ -9,24 +11,25 @@ from lib.twitter.api import Api
 def settings_loader(settings):
     daemon = getattr(settings, "DAEMON", False)
     
+    log_settings = {}
     logging = getattr(settings, "LOGGING", True)
     if logging:
-        if not getattr(settings, "LOG_DIR", ""):
-            # ログディレクトリの設定がなければ, Boxnya/logを設定
+        log_dir = getattr(settings, "LOG_DIR", None)
+        # ログディレクトリの設定がなければ, Boxnya/logを設定
+        if not log_dir:
             log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),"log")
-        else:
-            log_dir = settings.LOG_DIR
-        if not os.path.exists(log_dir): #フォルダが存在しなければ作る
+        
+        if not os.path.exists(log_dir):
             try:
                 os.makedirs(log_dir)
             except os.error:
                 sys.exit("Error : Cannot make log directory.")
+        
         log_settings = {"LOG_OUT":getattr(settings, "LOG_OUT", []),
                         "LOG_MOD":getattr(settings, "LOG_MOD", []),
                         "LOG_DIR":log_dir
                         }
-    else:
-        log_settings = {}
+    
     if not getattr(settings, "INOUT", {}):
         sys.exit("Error : No Input-to-Output matrix.")
     return {"DAEMON":daemon,
@@ -72,6 +75,7 @@ class Daemon(object):
         self.stdin = '/dev/null'
         self.stdout = log
         self.stderr = log
+    
     def daemonize(self):
         try: 
             pid = os.fork() 
@@ -104,8 +108,10 @@ class Daemon(object):
         atexit.register(self.delpid)
         pid = str(os.getpid())
         file(self.pidfile,'w+').write("%s" % pid)
+    
     def delpid(self):
         os.remove(self.pidfile)
+    
     def start(self):
         try:
             pf = file(self.pidfile,'r')
@@ -117,8 +123,10 @@ class Daemon(object):
             message = "pidfile %s already exist. Daemon already running?¥n"
             sys.stderr.write(message % self.pidfile)
             sys.exit(1)
+        
         self.daemonize()
         self.run()
+    
     def stop(self):
         try:
             pf = file(self.pidfile,'r')
@@ -142,9 +150,11 @@ class Daemon(object):
             else:
                 print str(err)
                 sys.exit(1)
+    
     def restart(self):
         self.stop()
         self.start()
+    
     def run(self):
         global main
         main()
@@ -156,30 +166,26 @@ signal.signal(signal.SIGINT, handler)
 
 def main():
     global settings
-    # ENABLE_MODULESが空なら全てのモジュールが有効なので, twitterは読み込まれる筈
-    if not settings["ENABLE_MODULES"] or "twitter" in settings["ENABLE_MODULES"]:
-        twitter_setting = settings["MODULE_SETTINGS"].get("twitter",{})
-        if isinstance(twitter_setting, dict):
-            twitter_setting = [twitter_setting]
-    
     master = Master(settings)
     master.start()
     signal.pause()
     master.join()
 
 if __name__ == "__main__":
-    if 2 <= len(sys.argv) <= 3 and 'init' == sys.argv[1]:
+    # initコマンド. 例 : $ python boxnya.py init 2
+    if 2 <= len(sys.argv) <= 3 and sys.argv[1] == 'init':
         account_number = sys.argv[2] if sys.argv[2:] else 0
         twitterinitializer(account_number)
         sys.exit(0)
-    if settings["DAEMON"]:
+    
+    if settings.get("DAEMON", False):
         if len(sys.argv) == 2:
             daemon = Daemon()
-            if 'start' == sys.argv[1]:
+            if sys.argv[1] == 'start':
                 daemon.start()
-            elif 'stop' == sys.argv[1]:
+            elif sys.argv[1] == 'stop':
                 daemon.stop()
-            elif 'restart' == sys.argv[1]:
+            elif sys.argv[1] == 'restart':
                 daemon.restart()
             else:
                 print "Unknown command"

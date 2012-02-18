@@ -34,10 +34,10 @@ class EgoSearch(Filter):
         if not isinstance(data, dict):
             return None
 
-        if data.get("mentions") and [user for user in self.screen_name if user in [mention["screen_name"] for mention in data["mentions"]]]:
+        if data.get("mentions") and [user for user in self.screen_name if user in data["mentions"]]:
             mention = {"user":data["user"]["screen_name"],
                        "post":data["text"]}
-            if self.sendable(mention) and not self.isUnofficialRT(mention["post"]):
+            if not self.isUnofficialRT(mention["post"]):
                 self.send(u"%(user)s: %(post)s" % mention, exclude = ["favbot"])
                 
                 if self.favtero and "fav" in mention["post"] and mention["user"] in self.screen_name:
@@ -54,7 +54,7 @@ class EgoSearch(Filter):
             elif "retweet" == data["event"]:
                 event = {"user":data["source"]["screen_name"],
                          "post":data["object"]["text"]}
-                self.send(u"%(user)s Retweeted: %(post)s" % event, exclude = ["favbot"])
+                self.send(u"♺ %(user)s Retweeted: %(post)s" % event, exclude = ["favbot"])
             
             elif "dm" == data["event"]:
                 event = {"user":data["source"]["screen_name"],
@@ -74,8 +74,7 @@ class EgoSearch(Filter):
         elif self.regexp and self.pattern.search(data.get("text", "")):
             mention = {"user":data["user"]["screen_name"],
                        "post":data["text"]}
-            if self.sendable(mention):
-                self.send(u"%(user)s: %(post)s" % mention, exclude = ["favbot"])
+            self.send(u"%(user)s: %(post)s" % mention, exclude = ["favbot"])
         
         elif data.get("event") == "favorite" and data["source"]["screen_name"] in self.favsync_sources:
             self.send({"id":data["object"]["id"],"type":"favsync"}, target = ["favbot"])

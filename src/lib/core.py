@@ -31,10 +31,12 @@ class Carrier(object):
         self.event.set()
     
     def clear(self):
+        ''' キューを空っぽにする '''
         while not self.empty():
             self.pickup()
     
     def empty(self):
+        ''' キューが空かどうかを返す '''
         return self.queue.empty()
     
     def sleep(self):
@@ -46,16 +48,17 @@ class BaseThread(Thread):
         master, logger, inputのoutput_carriersに, 配送先のCarrierオブジェクトを格納して引数に渡す.
     '''
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None,
-                  verbose=None, master=None, logger=None, output_carriers=[]):
+                  verbose=None, master=None, logger=None, output_carriers={}):
         super(BaseThread, self).__init__(group, target, name, args, kwargs, verbose)
-        if isinstance(kwargs, dict): # kwargsをselfにセット
+        # kwargsをインスタンスにセットする
+        if isinstance(kwargs, dict):
             for k,v in kwargs.items():
-                if not k in ("name", "master", "logger", "output_carriers"):
+                if not k in ("name", "master", "logger", "output_carriers"): # 予約語
                     setattr(self, k, v)
         self.daemon = True
         self.master = master
         self.logger = logger
-        self.output_carriers = dict([(o.name, o) for o in output_carriers])
+        self.output_carriers = output_carriers
         self.carrier = Carrier(name)
         self.stopevent = Event()
         self.history = []
@@ -87,10 +90,12 @@ class BaseThread(Thread):
     def send(self, data, target=[], exclude=[]):
         ''' これでデータを投げる '''
         packet = {"data":data, "from":self.name}
+        # target, excludeの成形
         if isinstance(target, str):
             target = [target]
         if isinstance(exclude, str):
             exclude = [exclude]
+        # setで集合演算. targetを優先する.
         if target:
             output_names = self.output_names & set(target)
         else:
@@ -100,6 +105,7 @@ class BaseThread(Thread):
             self.output_carriers[name].handover(copy.deepcopy(packet))
     
     def sendable(self, message):
+        ''' 送信可能かどうかをチェックする '''
         if message in self.history:
             return False
         self.history.append(message)
@@ -108,7 +114,7 @@ class BaseThread(Thread):
         return True
 
 class Input(BaseThread):
-    ''' ネットやシステムログなどBoxnyaの外界から定期的にデータを取ってきて, filter, outputに渡すスレッド '''
+    ''' ネットやファイルシステムなどBoxnyaの外界から定期的にデータを取ってきて, filter, outputに渡すスレッド '''
     def fetch(self):
         ''' データを取ってくる処理をここに '''
         #self.send(data, target, exclude)
@@ -148,7 +154,7 @@ class Filter(Output):
         self.filter(packet)
 
 class Logger(BaseThread):
-    ''' ログを取るためのスレッド. Outputみたいな役割をもつ '''
+    ''' ログ出力するためのスレッド. '''
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None,
                   verbose=None, master=None, settings=None):
         super(Logger, self).__init__(group, target, "logger", args, kwargs, verbose)
@@ -174,7 +180,8 @@ class Logger(BaseThread):
     def _write(self, packet):
         level = getattr(logging, packet["level"], logging.INFO)
         self.loggers[packet["from"]].log(level, packet["text"])
-        if level >= logging.ERROR:# エラー以上のログならば, settings.LOG_OUTにログテキストを渡す
+        # エラー以上のログならば, settings.LOG_OUTにログテキストを渡す
+        if level >= logging.ERROR:
             self.send(packet["text"])
     
     def run(self):
@@ -185,50 +192,52 @@ class Logger(BaseThread):
                     packet = self.carrier.pickup()
                     self._write(packet)
         except Exception:
-            self.call_master(sys.exc_info(), "error")
+            self.call_master(sys.exc_info(), "error") #TODO: Loggerの再起動処理
 
 class Master(BaseThread):
     ''' 全てのモジュールを管理するスレッド. モジュールのstart, stopなどはこのスレッドが行う. '''
     def __init__(self, settings, group=None, target=None, name=None, args=(), kwargs=None, verbose=None):
         super(Master, self).__init__(group, target, "system", args, kwargs, verbose)
-        self.modules = {}
+        self.modules = {} # 全てのモジュールのインスタンスを保持
         self.settings = {}
         self.output_carriers = {}
-        self.carrier_lists = {}
         
         self._set_settings(settings)
-        if self.logging: # ロガーの起動
+        # ロガーの起動
+        if self.logging:
             self.logger = Logger(master=self, settings=self.log_settings)
             self.logger.start()
         self.log("Boxnya system started.")
         self._load_modules()
         
-        for name, module in self.output_modules.items(): #outputモジュールをインスタンス化
+        #outputモジュールをインスタンス化
+        for name, module in self.output_modules.items():
             instance = module(name=name, kwargs=self.settings.get(name), master=self, logger=self.logger)
             self.modules[name] = instance
             self.output_carriers[name] = instance.carrier
         
-        if self.logging:# ロガーのエラー出力先outputをセット
+        # ロガーのエラー出力先outputをセット
+        if self.logging:
             log_outputs = self.log_settings["LOG_OUT"]
             self.logger.output_carriers = dict([(name, carrier) for name, carrier in self.output_carriers.items() 
-                                           if name.split(".")[0] in log_outputs])
+                                                                if name.split(".")[0] in log_outputs])
             self.logger.output_names = set(log_outputs)
         
-        for name, module in self.filter_modules.items(): #フィルターに出力先を渡してインスタンス化
-            outputs = [carrier for output_name, carrier in self.output_carriers.items()
-                               if output_name.split(".")[0] in self.input_to_output.get(name.split(".")[0])]
+        #フィルターに出力先を渡してインスタンス化
+        for name, module in self.filter_modules.items():
+            outputs = dict([(output_name, carrier) for output_name, carrier in self.output_carriers.items()
+                                    if output_name.split(".")[0] in self.input_to_output.get(name.split(".")[0])])
             
-            self.carrier_lists[name] = outputs
             instance = module(name=name, kwargs=self.settings.get(name),
-                        master=self, logger=self.logger, output_carriers=outputs)
+                              master=self, logger=self.logger, output_carriers=outputs)
             self.modules[name] = instance
             self.output_carriers[name] = instance.carrier
         
-        for name, module in self.input_modules.items(): #入力モジュールに出力先のメッセージを渡してインスタンス化
-            outputs = [carrier for output_name, carrier in self.output_carriers.items()
-                               if output_name.split(".")[0] in self.input_to_output.get(name.split(".")[0])]
+        #入力モジュールに出力先のメッセージを渡してインスタンス化
+        for name, module in self.input_modules.items():
+            outputs = dict([(output_name, carrier) for output_name, carrier in self.output_carriers.items()
+                                    if output_name.split(".")[0] in self.input_to_output.get(name.split(".")[0])])
             
-            self.carrier_lists[name] = outputs
             instance = module(name=name, kwargs=self.settings.get(name),
                                                 master=self, logger=self.logger, output_carriers=outputs)
             self.modules[name] = instance
@@ -269,24 +278,23 @@ class Master(BaseThread):
             self.log("no INPUT or OUTPUT module.", "ERROR")
             self.log("Boxnya system terminate.")
             sys.exit("Error : no INPUT or OUTPUT module.")
+        
         for input, outputs in self.input_to_output.items(): 
             # INOUTで, inputに対応するoutputが[]のときは, 読み込まれたoutput全てを設定
             if not outputs and input in self.input_modules:
                 self.input_to_output[input] = self.output_modules.keys() + self.filter_modules.keys()
             elif not outputs and input in self.filter_modules:
                 self.input_to_output[input] = self.output_modules.keys()
-            self._clone_modules(self.settings)
-    
-    def _clone_modules(self, settings):
-        ''' settingsにモジュールを多重化するように書いてあれば, そのモジュールをforkしておく. '''
-        for name, confs in settings.items():
+
+        # settingsにモジュールを多重化するように書いてあれば, そのモジュールをforkしておく
+        for name, confs in self.settings.items():
             if isinstance(confs, list):
                 for i,conf in enumerate(confs):
                     if i==0: #0番目のモジュールはそのまま
-                        settings[name] = conf
+                        self.settings[name] = conf
                     else:
                         new_name = "%s.%d" % (name, i)
-                        settings[new_name] = conf
+                        self.settings[new_name] = conf
                         self._fork(new_name)
     
     def _fork(self, name):
@@ -318,8 +326,11 @@ class Master(BaseThread):
                         self.log(packet["data"])
 
     def _error_handle(self, exception):
-        log_text = "Exception has occured in %s : %s %s" %(exception["from"],
-                    str(traceback.format_tb(exception["data"][2])), str(exception["data"][1]))
+        log_text = "Exception has occured in %s : %s %s" % (
+                            exception["from"],
+                            str(traceback.format_tb(exception["data"][2])),
+                            str(exception["data"][1])
+                    )
         self.log(log_text, level="ERROR")
         self._start_module(exception["from"])
     
@@ -336,14 +347,16 @@ class Master(BaseThread):
         super(Master, self).join(timeout)
     
     def _start_module(self, name):
+        outputs = dict([(output_name, carrier) for output_name, carrier in self.output_carriers.items()
+                            if output_name.split(".")[0] in self.input_to_output.get(name.split(".")[0])])
         if name in self.input_modules:
             instance = self.input_modules[name](name=name, kwargs=self.settings.get(name),
-                                master=self, logger=self.logger, output_carriers=self.carrier_lists[name])
+                                master=self, logger=self.logger, output_carriers=outputs)
             instance.start()
             self.modules[name] = instance
         elif name in self.filter_modules:
             instance = self.filter_modules[name](name=name, kwargs=self.settings.get(name),
-                                master=self, logger=self.logger, output_carriers=self.carrier_lists[name])
+                                master=self, logger=self.logger, output_carriers=outputs)
             instance.carrier = self.output_carriers[name]
             instance.carrier.clear()
             instance.start()
