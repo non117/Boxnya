@@ -181,7 +181,10 @@ def main():
 if __name__ == "__main__":
     # initコマンド. 例 : $ python boxnya.py init 2
     if 2 <= len(sys.argv) <= 3 and sys.argv[1] == 'init':
-        account_number = sys.argv[2] if sys.argv[2:] else 0
+        try:
+            account_number = int(sys.argv[2]) if sys.argv[2:] else 0
+        except ValueError:
+            sys.exit("Error : Please input a number.")
         twitterinitializer(account_number)
         sys.exit(0)
     
