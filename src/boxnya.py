@@ -168,8 +168,15 @@ def main():
     global settings
     master = Master(settings)
     master.start()
-    signal.pause()
-    master.join()
+    if os.name != "nt":
+        signal.pause()
+        master.join()
+    else:
+        try:
+            while True:
+                raw_input()
+        except KeyboardInterrupt:
+            master.join()
 
 if __name__ == "__main__":
     # initコマンド. 例 : $ python boxnya.py init 2
