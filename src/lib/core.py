@@ -179,10 +179,12 @@ class Logger(BaseThread):
     
     def _write(self, packet):
         level = getattr(logging, packet["level"], logging.INFO)
-        self.loggers[packet["from"]].log(level, packet["text"])
-        # エラー以上のログならば, settings.LOG_OUTにログテキストを渡す
-        if level >= logging.ERROR:
-            self.send(packet["text"])
+        logger = self.loggers.get(packet["from"])
+        if logger:
+            logger.log(level, packet["text"])
+            # エラー以上のログならば, settings.LOG_OUTにログテキストを渡す
+            if level >= logging.ERROR:
+                self.send(packet["text"])
     
     def run(self):
         try:
