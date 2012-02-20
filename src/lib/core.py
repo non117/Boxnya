@@ -251,7 +251,7 @@ class Master(BaseThread):
         modules = [(sys.modules.get('%s.%s' % (dirname,name)), name) for name in names]
         module_dict = {}
         for module, name in modules:
-            if not self.enable_modules or name in self.enable_modules: #enable_modulesが空なら常にTrue
+            if self.enable_modules == [] or name in self.enable_modules: #enable_modulesが空なら常にTrue
                 try:
                     class_name = [obj_name for obj_name in dir(module) if re.match(name, obj_name, re.IGNORECASE)][0]
                     module_dict[name] = getattr(module, class_name)
@@ -274,16 +274,16 @@ class Master(BaseThread):
         self.input_modules = self._make_module_dict('lib.inputs')
         self.output_modules = self._make_module_dict('lib.outputs')
         self.filter_modules = self._make_module_dict('lib.filters')
-        if not self.input_modules or not self.output_modules:
+        if self.input_modules == {} or  self.output_modules == {}:
             self.log("no INPUT or OUTPUT module.", "ERROR")
             self.log("Boxnya system terminate.")
             sys.exit("Error : no INPUT or OUTPUT module.")
         
         for input, outputs in self.input_to_output.items(): 
             # INOUTで, inputに対応するoutputが[]のときは, 読み込まれたoutput全てを設定
-            if not outputs and input in self.input_modules:
+            if outputs == [] and input in self.input_modules:
                 self.input_to_output[input] = self.output_modules.keys() + self.filter_modules.keys()
-            elif not outputs and input in self.filter_modules:
+            elif outputs == [] and input in self.filter_modules:
                 self.input_to_output[input] = self.output_modules.keys()
 
         # settingsにモジュールを多重化するように書いてあれば, そのモジュールをforkしておく
@@ -348,7 +348,7 @@ class Master(BaseThread):
     
     def _start_module(self, name):
         outputs = dict([(output_name, carrier) for output_name, carrier in self.output_carriers.items()
-                            if output_name.split(".")[0] in self.input_to_output.get(name.split(".")[0])])
+                            if output_name.split(".")[0] in self.input_to_output.get(name.split(".")[0],[])])
         if name in self.input_modules:
             instance = self.input_modules[name](name=name, kwargs=self.settings.get(name),
                                 master=self, logger=self.logger, output_carriers=outputs)

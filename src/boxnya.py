@@ -30,7 +30,7 @@ def settings_loader(settings):
                         "LOG_DIR":log_dir
                         }
     
-    if not getattr(settings, "INOUT", {}):
+    if getattr(settings, "INOUT", {}) == {}:
         sys.exit("Error : No Input-to-Output matrix.")
     return {"DAEMON":daemon,
             "LOGGING":logging,
@@ -47,7 +47,7 @@ except ImportError:
     sys.exit("Error : Cannot import settings module.")
 
 def twitterinitializer(account_number=0):
-    if not account_number:
+    if account_number == 0:
         global settings
         # settings - twitter内の辞書の数を数える
         twitter_setting = settings.get("MODULE_SETTINGS").get("twitter",[])
@@ -134,12 +134,12 @@ class Daemon(object):
             pf.close()
         except IOError:
             pid = None
-        if not pid:
+        if pid is None:
             message = "pidfile %s does not exist. Daemon not running?¥n"
             sys.stderr.write(message % self.pidfile)
             return # not an error in a restart
         try:
-            while 1:
+            while True:
                 os.kill(pid, signal.SIGTERM)
                 time.sleep(0.1)
         except OSError, err:

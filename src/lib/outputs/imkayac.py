@@ -24,5 +24,8 @@ class imkayac(Output):
             params["sig"] = hashlib.sha1("%s%s" % (message, self.sig)).hexdigest()
         
         request = urllib2.Request(url, data=urllib.urlencode(params))
-        response = urllib2.urlopen(request).read()
+        try:
+            response = urllib2.urlopen(request).read()
+        except urllib2.HTTPError, e:
+            return e.code
         return "posted" in response
