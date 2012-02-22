@@ -1,33 +1,41 @@
 Boxnyaはマルチインプット, マルチアウトプットの汎用通知システムです.
 
-Python 2.6以上が必要です. Python 3はサポートしていません.
-
-#TODO : rstにする
-
-使い方
+Python 2.6以上が必要です. Python 3.xはサポートしていません.
 
 Boxnyaとは
+===========
 
 　Boxnyaは, SNSなどのネット上の情報をあらゆる端末に通知することを目的としたシステムです.
-具体的には, Twitter等のふぁぼられ, リプライそしてGmailの新着通知などです.
+
 これらの機能は全てプラグインで実現されており, 指定されたフォルダにプラグインを入れて設定を書くだけで使うことができます.
 
-設定方法
-settings.pyに設定を書きます.
-DAEMON = Trueなら,
-$ python boxnya.py start|stop|restar
-で起動終了などが制御できます. boxnyaはデーモンプロセスとなります.
-windowsの場合は使えないので, DAEMON = Falseにして, 
-コマンドプロンプトで boxnya.pyを実行してください.
+使い方
+===========
 
-続きはあとでかく.
+　Boxnyaフォルダを任意のディレクトリに置いて, コマンドラインからBoxnya/src/boxnya.pyを起動します.
 
-プラグイン開発者向け
+プラグインは, Boxnya/src/lib/input, output, filterフォルダに入れ, 必要に応じて設定を書きます.
 
-Boxnyaでは入力, フィルター, 出力の順に情報を処理してim.kayac.com, Google Talkなどに通知を行います.
-　全ての入出力とフィルターはプラグイン方式で実現されており, 入出力関係も任意のつなぎ方をすることが可能です.
-例えばTwitterの情報をim.kayac.comを通してGoogle Talkに通知する流れとしては以下のようになります. 
-入力のTwitterプラグインでuserstreamを受け取る -> 適切なフィルタを通す -> im.kayac.comの出力プラグイン
-各プラグインは, 対応するinput, filter, outputのディレクトリに格納し, それぞれの設定をsettings.pyに書くだけで使えます.
+設定
+===========
 
-TODO: 免責事項
+　Boxnya/src/settings.pyに設定を書きます.
+
+Boxnya/src/settings.py.example のを参照してください.
+
+プラグインの役割
+===========
+
+ * Inputプラグイン
+
+ネット等から情報を取得してきます. twitterの場合userstreamを読み続けます.
+
+ * Filterプラグイン
+
+Inputから受け取った情報をフィルタリングします. 
+twitterで複数アカウントを運用する場合などはまとめてフィルタリングすることができます.
+
+* Outputプラグイン
+
+InputあるいはFilterから受け取った情報を, Boxnya以外のシステムへの送り出します.
+twitterの場合には, Growlやim.kayac.comにデータを通知します.

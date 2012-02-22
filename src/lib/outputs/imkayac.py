@@ -18,9 +18,9 @@ class imkayac(Output):
             return None
         
         params = {"message":message}
-        if self.password:
+        if hasattr(self, "password"):
             params["password"] = self.password
-        if self.sig:
+        if hasattr(self, "sig"):
             params["sig"] = hashlib.sha1("%s%s" % (message, self.sig)).hexdigest()
         
         request = urllib2.Request(url, data=urllib.urlencode(params))

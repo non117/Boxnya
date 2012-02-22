@@ -13,7 +13,7 @@ DAEMON = False
 # ログ出力を有効にするかどうか. True推奨.
 LOGGING = True
 
-# ログを保存するディレクトリ名
+# ログを保存するディレクトリ名. この設定の場合, Boxnya/log/になります.
 LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),"log")
 
 # エラーが発生した時にエラー内容を出力するOutputプラグイン名. []なら出力されません.
@@ -36,7 +36,6 @@ ENABLE_MODULES = []
 INOUT = {
          "twitter":["egosearch"],
          "egosearch":["favbot", "imkayac"],
-         "gmail":["imkayac"],
          }
 
 ## モジュール(プラグイン)の設定
@@ -51,14 +50,12 @@ INOUT = {
 # つまり, 例のモジュール3では, 設定3に対してCが設定されたモジュールと, 設定3に対してDが設定された別々のモジュールが動きます.
 # これはtwitterアカウントが複数ある場合などを想定しています.
 # また, 複数設定する項目はリスト[]の中に文字列を書いてください.
+# オプションとされている設定項目は書かなくても大丈夫です.
 
 MODULE_SETTINGS = {
                   ## Inputモジュールの設定
-                  # gmailのアドレスとそのパスワード
-                  "gmail":{"username":"", "password":""},
-                  
-                  # twitterの設定は python boxnya.py init 2(2は任意の数字. アカウント数) を実行すると, 
-                  # このファイルの末尾に設定が書き込まれるのでそれをコピペしてください.
+                  # python boxnya.py init 2(2は任意の数字. アカウント数) を実行してwebブラウザから認証を行うと, 
+                  # twitterの設定がこのファイルの末尾に設定が書き込まれるのでそれをコピペしてください.
                   "twitter":[
                              {'atokensecret': '', 'atoken': ''},
                              {'atokensecret': '', 'atoken': ''}
@@ -69,12 +66,18 @@ MODULE_SETTINGS = {
                    "egosearch":{
                                 "screen_name":["",""], # "twitter"で設定したアカウントのスクリーンネーム
                                 "regexp":"", # エゴサーチ用の正規表現
+                                "disable":[] # オプション "retweet","fav","dm","list","follow","reply","egosearch"
+                                             # のキーワードをリスト内に書くことでその機能を無効にできます.
                                 "favsync_sources":[""], # オプション favbotと組み合わせて, fav同期されるアカウントを指定します.
-                                "favtero":True, # オプション favtero機能が使えるようになります
-                                "filterRT":True, # オプション 非公式RTを通知しないようにします
+                                                        # アカウント1でふぁぼると同じtweetをアカウント2でもふぁぼるといったことが可能です.
+                                "favtero":False, # オプション favtero機能が使えるようになります
+                                                 # @[自分のスクリーンネーム] fav [対象のスクリーンネーム] [ふぁぼる数]
+                                "filterRT":False, # オプション 非公式RTを通知しないようにします
                                 },
+                   
                    ## Outputモジュールの設定
-                   # im.kayac.comを使ってPUSH通知をするための設定. passwordとsigは設定してる場合だけ入力してください.
+                   # im.kayac.comを使って通知をするための設定. passwordとsigは設定してる場合だけ入力してください.
+                   # im.kayac.comを使うと, iPhoneへのPUSH通知やgoogle talkでの通知が可能です.
                    "imkayac":{
                               "username":"",
                               "password":"", # オプション
@@ -83,6 +86,6 @@ MODULE_SETTINGS = {
                    # fav同期やfavテロを行うための設定. 
                    "favbot":{
                              "include":["twitter"], # "twitter"から設定をコピーしてきます.
-                             "favsync_targets":[""], # オプションfav同期の対象を指定します.
+                             "favsync_targets":[""], # オプション fav同期の対象を指定します.
                             },
                    }
