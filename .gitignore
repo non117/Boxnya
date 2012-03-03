@@ -1,23 +1,9 @@
-# Mac
+.project
+.pydevproject
+.settings/*
 .DS_Store
-
-# Windows
-Thumbs.db
-
-# emacs
+settings.py
+boxnya.pid
+*.pyc
+log/
 *~
-
-# vim
-*.swp
-
-# conf
-*.yaml
-/conf/*
-
-# log
-/log/*
-
-# other
-/.pydevproject
-/.project
-/.settings
