@@ -66,7 +66,7 @@ MODULE_SETTINGS = {
                    "egosearch":{
                                 "screen_name":["",""], # "twitter"で設定したアカウントのスクリーンネーム
                                 "regexp":"", # エゴサーチ用の正規表現
-                                "disable":[] # オプション "retweet","fav","dm","list","follow","reply","egosearch"
+                                "disable":[], # オプション "retweet","fav","dm","list","follow","reply","egosearch"
                                              # のキーワードをリスト内に書くことでその機能を無効にできます.
                                 "favsync_sources":[""], # オプション favbotと組み合わせて, fav同期されるアカウントを指定します.
                                                         # アカウント1でふぁぼると同じtweetをアカウント2でもふぁぼるといったことが可能です.
