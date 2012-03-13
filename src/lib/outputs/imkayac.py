@@ -26,6 +26,6 @@ class imkayac(Output):
         request = urllib2.Request(url, data=urllib.urlencode(params))
         try:
             response = urllib2.urlopen(request).read()
-        except urllib2.HTTPError, e:
-            return e.code
+        except urllib2.URLError:
+            pass
         return "posted" in response
