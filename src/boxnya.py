@@ -58,7 +58,7 @@ def twitterinitializer(account_number=0):
     tokens = ['\n"twitter":[']
     api = Api()
     for i in range(account_number):
-        print "\n\n---> Authorize %dth account." % i + 1
+        print "\n\n---> Authorize %dth account." % (i + 1)
         tokens.append("\n%s," % str(api.initializer()))
     tokens.append('],')
     
