@@ -162,7 +162,8 @@ def dm(data):
             }
 
 def delete(data):
-    return {"type":data["delete"].keys()[0],
+    return {"event":"delete",
+            "type":data["delete"].keys()[0],
             "user_id":data["delete"].values()[0]["user_id"],
             "id":data["delete"].values()[0]["id"],
             "date":unicode(datetime.datetime.today().strftime("%a %b %d %H:%M:%S +0900 %Y"))

@@ -2,6 +2,9 @@ Boxnyaはマルチインプット, マルチアウトプットな汎用通知シ
 
 Python 2.6以上が必要です. Python 3.xはサポートしていません.
 
+詳しい使い方についてはこちらを参照してください.
+http://wp.non117.com/index.php/archives/142
+
 Boxnyaとは
 =============
 

@@ -326,7 +326,7 @@ class Master(BaseThread):
                 elif packet["type"] == "log":
                     if isinstance(packet["data"], str):
                         self.log(packet["data"])
-
+    
     def _error_handle(self, exception):
         log_text = "Exception has occured in %s : %s %s" % (
                             exception["from"],
@@ -379,3 +379,5 @@ class Master(BaseThread):
             instance.join(1)
             if not instance.is_alive():
                 self.modules.pop(name)
+                return True
+            return False
