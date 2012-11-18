@@ -42,19 +42,19 @@ class Api():
             return False
 
     def timeline(self):
-        url = self.site + "1/statuses/home_timeline.json"
+        url = self.site + "1.1/statuses/home_timeline.json"
         return self.execute(url,"GET")
 
     def user_timeline(self, count=20, screen_name=""):
-        url = self.site + "1/statuses/user_timeline.json"
+        url = self.site + "1.1/statuses/user_timeline.json"
         return self.execute(url, "GET", {"count":count, "screen_name":screen_name})
 
     def update(self, status):
-        url = self.site + "1/statuses/update.json"
+        url = self.site + "1.1/statuses/update.json"
         return self.execute(url,"POST", {"status":status})
     
     def favorite(self, status_id):
-        url = self.site + "1/favorites/create/%s.json" % str(status_id)
+        url = self.site + "1.1/favorites/create.json"
         return self.execute(url, "POST", {"id":str(status_id)})
     
     def upload_icon(self, filename):
