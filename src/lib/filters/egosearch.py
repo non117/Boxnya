@@ -66,7 +66,7 @@ class EgoSearch(Filter):
                 if self.favtero and "fav" in mention["post"] and mention["user"] in self.screen_name:
                     self.send({"text":mention["post"], "mention":data["mentions"], "type":"favtero"}, target=["favbot"])
         
-        elif data.get("event") and data["target"]["screen_name"] in self.screen_name:
+        elif data.get("event") and data.get("target") and data["target"]["screen_name"] in self.screen_name:
             if self.fav and "favorite" in data["event"]:
                 event = {"star":u"☆" if "un" in data["event"] else u"★",
                          "user":data["source"]["screen_name"],
