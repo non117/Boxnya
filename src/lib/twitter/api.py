@@ -15,9 +15,9 @@ class Api():
     
     def initializer(self):
         ''' アクセストークン, シークレットを作る '''
-        request_url = "http://twitter.com/oauth/request_token"
+        request_url = "https://twitter.com/oauth/request_token"
         auth_url = "https://twitter.com/oauth/authorize"
-        accesstoken_url = "http://twitter.com/oauth/access_token"
+        accesstoken_url = "https://twitter.com/oauth/access_token"
         return self.oauth.oauth_initializer(request_url, auth_url, accesstoken_url)
     
     def execute(self, url, method, params={}, extra_header={}, extra_data=None):
