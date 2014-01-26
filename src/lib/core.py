@@ -6,7 +6,7 @@ import re
 import sys
 import traceback
 from logging.handlers import RotatingFileHandler
-from Queue import Queue
+from queue import Queue
 from threading import Event, Thread
 
 class Carrier(object):

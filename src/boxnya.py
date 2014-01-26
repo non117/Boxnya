@@ -58,14 +58,14 @@ def twitterinitializer(account_number=0):
     tokens = ['\n"twitter":[']
     api = Api()
     for i in range(account_number):
-        print "\n\n---> Authorize %dth account." % (i + 1)
+        print("\n\n---> Authorize %dth account." % (i + 1))
         tokens.append("\n%s," % str(api.initializer()))
     tokens.append('],')
     
     with open(os.path.dirname(os.path.abspath(__file__)) + "/settings.py", "a") as f:
         f.writelines(tokens)
     
-    print tokens
+    print(tokens)
     
 class Daemon(object):
     def __init__(self):
@@ -81,7 +81,7 @@ class Daemon(object):
             pid = os.fork() 
             if pid > 0:
                 sys.exit(0) 
-        except OSError, e: 
+        except OSError as e: 
             sys.stderr.write("fork #1 failed: %d (%s)¥n" % (e.errno, e.strerror))
             sys.exit(1)
         os.chdir("/") 
@@ -92,7 +92,7 @@ class Daemon(object):
             pid = os.fork() 
             if pid > 0:
                 sys.exit(0) 
-        except OSError, e: 
+        except OSError as e: 
             sys.stderr.write("fork #2 failed: %d (%s)¥n" % (e.errno, e.strerror))
             sys.exit(1) 
 
@@ -142,13 +142,13 @@ class Daemon(object):
             while True:
                 os.kill(pid, signal.SIGTERM)
                 time.sleep(0.1)
-        except OSError, err:
+        except OSError as err:
             err = str(err)
             if err.find("No such process") > 0:
                 if os.path.exists(self.pidfile):
                     os.remove(self.pidfile)
             else:
-                print str(err)
+                print(str(err))
                 sys.exit(1)
     
     def restart(self):
@@ -198,14 +198,14 @@ if __name__ == "__main__":
             elif sys.argv[1] == 'restart':
                 daemon.restart()
             else:
-                print "Unknown command"
+                print("Unknown command")
                 sys.exit(2)
             sys.exit(0)
         else:
-            print "usage: %s start|stop|restart" % sys.argv[0]
+            print("usage: %s start|stop|restart" % sys.argv[0])
             sys.exit(2)
     else:
-        print "---> Boxnya service start."
+        print("---> Boxnya service start.")
         main()
-        print "\n---> see you !"
+        print("\n---> see you !")
         sys.exit(0)

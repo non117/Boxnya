@@ -3,7 +3,7 @@ import datetime
 import json
 import gzip
 import mimetypes
-import urllib, urllib2
+import urllib
 from lib.twitter.oauth import OAuth
 from StringIO import StringIO
 
@@ -30,7 +30,7 @@ class Api():
         extra_header.update({"Accept-Encoding": "deflate, gzip"})
         request = self.oauth.base(url, method, params, extra_header, extra_data)
         try:
-            response = urllib2.urlopen(request)
+            response = urllib.request.urlopen(request)
             if response.info().get('Content-Encoding') == 'gzip':
                 buf = StringIO(response.read())
                 f = gzip.GzipFile(fileobj=buf)
@@ -38,7 +38,7 @@ class Api():
             else:
                 data = response.read()
             return parse(data)
-        except urllib2.URLError:
+        except urllib.URLError:
             return False
 
     def timeline(self):
@@ -79,17 +79,17 @@ class Api():
         
         url = 'https://userstream.twitter.com/2/user.json'
         req = self.oauth.base(url, "GET")
-        response = urllib2.urlopen(req)
+        response = urllib.request.urlopen(req)
         response.readline()
         response.readline()
         while True:
             try:
                 rawstr = response.readline()
-            except urllib2.URLError:
+            except urllib.URLError:
                 rawstr = ''
             if rawstr == '':
                 response.close()
-                response = urllib2.urlopen(self.oauth.base(url, "GET"))
+                response = urllib.request.urlopen(self.oauth.base(url, "GET"))
                 continue
             else:
                 if rawdata:
