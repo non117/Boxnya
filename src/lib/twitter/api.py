@@ -11,7 +11,7 @@ class Api():
     def __init__(self,  atoken="", atokensecret="", ckey="ZctjpCsuug2VtjfEuceg", 
                  csecret="pO9WL26Ia9rXyjNavXrit1iclCt1G2J1nRA4jZ6LGc"):
         self.oauth = OAuth(ckey, csecret, atoken, atokensecret)
-        self.site = "http://api.twitter.com/"
+        self.site = "https://api.twitter.com/"
     
     def initializer(self):
         ''' アクセストークン, シークレットを作る '''
